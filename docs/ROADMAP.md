@@ -1,12 +1,27 @@
 # Roadmap
 
-Updated: 2026-10-28
+Updated: 2026-10-28 (evening)
 
 ## Phase 0 — Spec & repo foundation ✅ (2026-10-28)
 
 Control-surface spec agreed; two-lane architecture agreed; engine strategy and
-deployment stance decided (ADRs 0001–0007); research findings recorded; this repo
+deployment stance decided (ADRs 0001–0008); research findings recorded; this repo
 created with the tiles methodology in place.
+
+## Live track — Riva/Magpie engine bring-up (in progress, 2026-10-28)
+
+The owner brought a Riva 2.26 setup that turned out to be a false start; the
+evening session mapped the real embedded stack, found a login-free deployment
+route (HF checkpoint + in-image toolchain), and produced the deploy toolkit in
+`daemon/riva-deploy/`. Status: build/deploy/serve/probe scripts ready; engine
+build in progress. See `docs/research/2026-10-28d-riva-magpie-thor-deployment.md`.
+
+## Explorations
+
+- **Lane C — the live show** (opened 2026-10-28): interactive character podcast,
+  producer-in-the-loop, vibe-coded characters and show format, simulation-first.
+  Seeds, not constraints — see `docs/design/lane-c-explorations.md`. Graduates
+  to an ADR when the `lane-c-sim` harness validates the core state machine.
 
 ## Phase 1 — Extension v1 + minimal daemon (next)
 

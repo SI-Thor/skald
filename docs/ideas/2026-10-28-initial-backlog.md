@@ -69,6 +69,28 @@ different client, a different phase, or a different product entirely.
 - NIM dependency today (ADR-0006) — x86 + enterprise license; revisit on ARM64.
 - Reader-mode UI — the owner explicitly doesn't use it; page-as-is with highlighting.
 
+## Added 2026-10-28 (late evening — Riva deploy session + Lane C brainstorm)
+
+- **GGUF Magpie on llama.cpp (CPU engine).** HF ships f16/q8_0 GGUF builds of
+  Magpie 357M. A llama.cpp TTS path would give a zero-GPU fallback engine for
+  any client host. Fits: tiny edge installs, CPU-only kiosks, phones someday.
+- **Riva HTTP :50000 bridge probe.** Riva 2.26 ships an HTTP server next to
+  gRPC; if its API is OpenAI-shaped (or close), the skald daemon bridge becomes
+  trivial. One evening, once the server is up. Fits: every Riva-hosting install.
+- **Voice-slot indirection.** Characters bind to a registry voice *slot*, not a
+  concrete voice — personas survive engine upgrades (fixed Magpie voices today,
+  cloned voices when the expressive tier lands). Adopted into Lane C design.
+- **Producer-as-character.** The listener enters show memory and
+  relationships.json; hosts relate to *you* over time. Part of Lane C design doc.
+- **Method-mode character creation.** Perform the character yourself in 1st
+  person; the system distills your performance into the persona sheet. In the
+  Lane C doc; needs sim validation.
+- **Subagent content-relay ops pattern.** When approval gates block subagent
+  writes, the subagent delivers file content in its final report; the main
+  session materializes verbatim on resume. Worked 2026-10-28; reusable for any
+  unattended session. (Also in research note d, §5.)
+
+
 ## Added 2026-10-28 (later, from the NVIDIA toolkit survey)
 
 - **TAO Toolkit — per-client custom TTS voices.** Fine-tune brand voices for client
