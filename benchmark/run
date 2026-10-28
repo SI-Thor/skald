@@ -1,0 +1,10 @@
+#!/bin/sh
+# Skald benchmark harness launcher — usable from any cwd.
+#
+#   ./run --engine mock --label demo   # benchmark run (mock demo)
+#   ./run report                       # Markdown scorecard from results/
+#
+# Equivalent to: python3 -m benchmark ... from the repository root.
+set -e
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+exec env PYTHONPATH="${ROOT}${PYTHONPATH:+:${PYTHONPATH}}" python3 -m benchmark "$@"

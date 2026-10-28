@@ -1,0 +1,6 @@
+# Benchmark artifacts must never be committed (ADR-0010: results are
+# hardware- and power-state-specific; they are archived, not versioned here).
+results/
+
+__pycache__/
+*.pyc

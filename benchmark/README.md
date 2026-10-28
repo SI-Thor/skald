@@ -1,21 +1,157 @@
 # benchmark/ — on-device TTS engine scorecard
 
-Status: not started (Phase 2). Spec: ADR-0005.
+Status: **harness built and verified green on this Thor with the mock engine**
+(2026-10-28). The `riva` engine adapter is written against the documented
+Riva 2.x API but unverified against a live server — see
+[What's unverified](#whats-unverified). Spec: ADR-0005 (engine strategy) and
+ADR-0010 (Thor-first: no benchmark number without power context).
 
-Published RTF numbers come from datacenter GPUs (e.g. fish-speech S2-Pro's 0.195 is an
-H200 figure) and do not transfer to the Thor's embedded Blackwell. Engine selection is
-therefore decided by measurements on the actual target hardware.
+Published RTF numbers come from datacenter GPUs (e.g. fish-speech S2-Pro's
+0.195 is an H200 figure) and do not transfer to the Thor's embedded
+Blackwell. Engine selection is therefore decided by measurements on the
+actual target hardware, in the power state it will actually run in.
 
-Scorecard per engine (candidates: Kokoro, Piper, fish-speech S2-Pro, Chatterbox,
-Orpheus-3B):
+## Layout
 
-| Metric | How |
+| File | Role |
 |---|---|
-| Time-to-first-audio | streaming request, cold and warm |
-| Streaming RTF | sustained sentence stream, GPU and CPU |
-| Memory footprint | VRAM/unified during peak |
-| Long-doc stability | 10k+ words, no drift/desync/failure |
-| Subjective quality | owner rating per use case: paper / news / story |
+| `envsnap.py` | ADR-0010 environment snapshot embedded in every result JSON |
+| `engines.py` | `Engine` interface, `MockEngine` (deterministic sine), `RivaEngine` |
+| `harness.py` | CLI; runs the 4 scorecard phases, writes one JSON per run |
+| `report.py` | Renders the Markdown scorecard from all result JSONs |
+| `quality-form.md` | Subjective 1–5 rating template (paper / news / story) |
+| `run` | Shell launcher; `pyproject.toml` optional `[riva]` extra |
+| `results/` | Result JSONs + probe WAVs — **gitignored, never committed** |
 
-The harness doubles as the acceptance test when engines or JetPack/CUDA versions
-change, and re-runs on any hardware a client install targets (ADRs 0005, 0007).
+## Quickstart (verified on this host)
+
+From the repository root:
+
+```sh
+# Mock demo — full scorecard run, ~25 s, writes results/mock_demo_<ts>.json
+./benchmark/run --engine mock --label demo --save-probes
+
+# Scorecard — Markdown table from every result JSON
+./benchmark/run report
+```
+
+Equivalent module form (what `run` wraps):
+
+```sh
+python3 -m benchmark run --engine mock --label demo
+python3 -m benchmark report
+```
+
+A typical pass looks like:
+
+```
+[1/4] cold first synthesis (9 words)      ttfa=0.354s
+[2/4] 8 short sentences (warm TTFA)       ttfa median=0.050s
+[3/4] sustained passage (495 words)       wall=0.922s audio=198.0s rtf=0.0047
+[4/4] long-doc stability (20 x passage)   pass — 0 failure(s)
+```
+
+`report` output can be archived with `--out`, e.g.
+`./benchmark/run report --out results/scorecard-$(date +%F).md`.
+
+## Dependencies
+
+- Python **3.10+**, standard library only — no installs needed for the mock
+  path (verified with the system CPython 3.12 on the Thor).
+- Optional, only to target a live Riva server:
+
+  ```sh
+  python3 -m pip install -e './benchmark[riva]'   # pulls nvidia-riva-client
+  ```
+
+  The import is lazy: without it, `--engine riva` fails fast with an
+  install hint (exit 2) and everything else still runs.
+
+## What a run measures
+
+Every run puts **one JSON file** in `results/` named
+`<engine>_<label>_<timestamp>.json`, containing the engine config, the env
+snapshot, and four phases (all timed harness-side with `perf_counter`, so
+numbers are comparable across engines):
+
+1. **cold** — first-ever synthesis on a fresh engine object (model load /
+   gRPC connect included). Timed separately from everything warm.
+2. **short** — N short sentences (default 8); per-sentence TTFA, reported
+   as median/min/max. Sentences include names, numbers, and nested clauses.
+3. **passage** — a fixed ~495-word passage as one sustained stream; RTF =
+   wall time / audio duration (audio duration computed from PCM byte count
+   at the engine's declared sample rate). RTF < 1.0 = faster than real time.
+4. **longdoc** — the passage repeated 20x (~9,900 words). Pass = no errors,
+   no zero-audio iterations, no per-iteration audio-duration drift beyond
+   25% of the median (desync / degradation heuristic). If the very first
+   iteration fails, remaining ones are skipped rather than hammering a dead
+   engine.
+
+Add `--save-probes` to also write `sentence.wav` + `passage.wav` (16-bit
+mono PCM) under `results/probes/<run_id>/` for subjective listening
+(`quality-form.md` is the template for that half of ADR-0005).
+
+Exit codes: `0` all phases clean, `1` phases ran but failures recorded
+(result JSON still written), `2` engine unavailable (nothing measured).
+
+### CLI reference (`run` phase)
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--engine` | `mock` | `mock` or `riva` |
+| `--voice` | engine default | voice name (`sine` / e.g. `English-US.Female-1`) |
+| `--language-code` | `en-US` | passed through to the engine |
+| `--riva-uri` | `localhost:50051` | gRPC endpoint |
+| `--label` | `run` | baked into the result filename |
+| `--results-dir` | `benchmark/results` | where JSONs go |
+| `--sentences` | 8 | warm-TTFA sentence count |
+| `--repeats` | 20 | long-doc repetitions |
+| `--tegrastats-seconds` | 5 | env-sample length (`0` disables) |
+| `--save-probes` | off | write listening WAVs |
+
+`report [--results-dir DIR] [--out FILE]` — one row per engine (latest run,
+all runs counted), sorted by engine, env header from the newest run.
+
+## Environment snapshot (ADR-0010)
+
+`envsnap.capture()` records, with the method used for each:
+
+- **Power mode** — `nvpmodel -q` (here: `120W`, mode id 1).
+- **Clock state** — presence of `/tmp/l4t_dfs_frequence_boost`, the marker
+  the L4T `jetson_clocks` script historically touches when locking clocks.
+  Absent → recorded as `no_marker` = treated as *not locked*, with the
+  caveat that newer L4T builds may lock clocks without the marker; the
+  tegrastats sample also records `cpu_freq_range_mhz` (e.g. 972–2601 MHz =
+  clearly varying DVFS) as corroborating evidence. This is the documented
+  proxy, not a guarantee.
+- **tegrastats** — 5 s sample (`--interval 500`): avg CPU%, GPU% (GR3D),
+  EMC%, CPU/GPU/Tj temps, VIN rail power. **Known gap on this host:** JetPack 7
+  (L4T R39.2.1) `tegrastats` on the Thor prints no `GR3D_FREQ`/`EMC` fields,
+  so GPU/EMC utilization is recorded as absent with an explicit note rather
+  than faked; CPU%, thermals and power are captured. When Riva is actually
+  under load, re-check whether a newer tegrastats (or jtop) fills the gap.
+- **Platform** — `/proc/device-tree/model`, `/etc/os-release`, kernel,
+  `/etc/nv_tegra_release` (L4T), `dpkg-query nvidia-jetpack` (JetPack).
+
+On non-Jetson hosts every probe degrades to an explicit `unavailable`
+marker (e.g. `nvpmodel unavailable (non-Jetson host?)`) so the harness and
+the mock path run anywhere; results then just carry less context.
+
+## What's unverified
+
+- **`RivaEngine` call shapes.** No live Riva server exists on this box yet,
+  so none of the gRPC calls have been executed. Written against the
+  documented Riva 2.x `nvidia-riva-client` API; the specific assumptions,
+  each marked `UNVERIFIED` in `benchmark/engines.py`:
+  `riva.client.Auth(uri=..., use_ssl=...)`, `riva.client.SpeechSynthesisService(auth)`,
+  and `synthesize_online(text=..., voice_name=..., language_code=...,
+  sample_rate_hz=...)` yielding responses with `.audio` raw-PCM chunks
+  (16-bit mono at the requested rate). First contact with a real server is
+  a smoke test: fix kwargs there if they differ, then benchmark.
+- **GPU/EMC utilization** from tegrastats on JetPack 7 / Thor (see above).
+- Riva probe-WAV validity depends on the PCM-format assumption above; mock
+  WAVs are verified (16 kHz mono 16-bit, sane durations).
+
+Verified working on this host (2026-10-28): mock demo run + probe WAVs +
+scorecard render + `python3 -m benchmark` entry + riva-without-dependency
+error path + report-on-empty error path.
