@@ -1,0 +1,35 @@
+# build / deps
+node_modules/
+dist/
+build/
+__pycache__/
+*.pyc
+.venv/
+venv/
+uv.lock
+
+# models & audio artifacts (weights are large and have their own licenses)
+*.onnx
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.wav
+*.mp3
+*.flac
+*.ogg
+models/
+voices/
+!docs/**/*
+
+# runtime state
+data/
+workspace/
+*.log
+.env
+
+# tooling
+.DS_Store
+*.swp
+.idea/
+.vscode/
