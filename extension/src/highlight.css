@@ -1,0 +1,14 @@
+/* skald — sentence highlight styles, injected into the page by background.js
+   via scripting.insertCSS. Styled through the CSS Custom Highlight API
+   (requires Firefox 140+, hence the manifest's strict_min_version). */
+
+::highlight(skald-sentence) {
+  background-color: rgba(255, 180, 84, 0.38);
+  color: inherit;
+}
+
+@media (prefers-color-scheme: dark) {
+  ::highlight(skald-sentence) {
+    background-color: rgba(255, 206, 130, 0.32);
+  }
+}

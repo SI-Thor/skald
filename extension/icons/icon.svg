@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <!-- skald icon: dark rounded tile with an amber waveform. Kept in sync
+       with the layout constants in generate.js. -->
+  <rect width="96" height="96" rx="18" fill="#222837"/>
+  <g>
+    <rect x="20" y="33" width="7" height="29" rx="3.5" fill="#ffb454"/>
+    <rect x="32" y="22" width="7" height="52" rx="3.5" fill="#ffb454"/>
+    <rect x="44" y="9"  width="7" height="77" rx="3.5" fill="#ffce82"/>
+    <rect x="57" y="22" width="7" height="52" rx="3.5" fill="#ffb454"/>
+    <rect x="69" y="33" width="7" height="29" rx="3.5" fill="#ffb454"/>
+  </g>
+</svg>

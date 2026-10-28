@@ -1,0 +1,143 @@
+/* skald — control bar styles. Lives inside a closed shadow DOM; :host uses
+   `all: initial` so page CSS cannot restyle the bar through the host. */
+
+:host {
+  all: initial;
+  position: fixed;
+  /* keep the bar above page stacking contexts */
+  z-index: 2147483647;
+  width: max-content;
+  height: max-content;
+}
+
+.skald-bar {
+  display: flex;
+  flex-direction: column;
+  background: #1b2030;
+  color: #e8ebf2;
+  border: 1px solid #39415a;
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  line-height: 1.2;
+  user-select: none;
+  cursor: default;
+}
+
+.skald-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+}
+
+.skald-row-main {
+  min-height: 38px; /* compact per ADR-0004 */
+}
+
+.skald-row-engine,
+.skald-row-tuning {
+  display: none;
+  border-top: 1px solid #2a3046;
+}
+
+.skald-bar[data-expanded='1'] .skald-row-engine {
+  display: flex;
+}
+
+.skald-bar[data-expanded='2'] .skald-row-engine,
+.skald-bar[data-expanded='2'] .skald-row-tuning {
+  display: flex;
+}
+
+.skald-btn {
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #e8ebf2;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0;
+  font-family: inherit;
+}
+
+.skald-btn:hover:not([disabled]) {
+  background: #2a3350;
+}
+
+.skald-btn:active:not([disabled]) {
+  background: #333e63;
+}
+
+.skald-btn[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.skald-btn-text {
+  width: auto;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.skald-grip {
+  cursor: grab;
+  color: #8b93a8;
+}
+
+.skald-grip:active {
+  cursor: grabbing;
+  background: transparent;
+}
+
+.skald-label {
+  color: #aab2c5;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.skald-slider {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.skald-slider input[type='range'] {
+  accent-color: #ffb454;
+  height: 18px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.skald-slider-value {
+  color: #c7cdde;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  min-width: 3.4em;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.skald-bar select {
+  background: #242b3f;
+  color: #e8ebf2;
+  border: 1px solid #39415a;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: inherit;
+  padding: 2px 4px;
+  max-width: 190px;
+  cursor: pointer;
+}
+
+.skald-saved-flash {
+  color: #7dd6a0;
+}
