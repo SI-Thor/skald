@@ -1,0 +1,79 @@
+# =====================================================================
+# servicemaker configs/tts/base.yaml - partial extraction
+#
+# PROVENANCE NOTE
+# ---------------
+# Full-path source (inside the Riva image):
+#   /usr/local/lib/python3.12/dist-packages/servicemaker/configs/tts/base.yaml
+#   (image: nvcr.io/nvidia/riva/riva-speech:2.26.0-l4t-aarch64)
+#
+# `docker run`/`docker create`/`docker cp` were blocked by the agent
+# sandbox at toolkit-creation time, so the file could NOT be copied out
+# verbatim in full. What follows is:
+#
+#   [VERIFIED]  The header comment and the first ~60 lines (every key
+#               name, default value, and comment quoted below) were read
+#               directly from the image in an earlier session of this
+#               project. Unknown values are marked `??? (not captured)`
+#               rather than guessed.
+#
+#   [NOT RECOVERED] The tail of the file (everything after the
+#               `preprocessor:` block's `mapping_path` line) was never
+#               read. In particular the full `preprocessor:` sub-tree
+#               and any optional-module sub-configs for `neuralg2p`,
+#               `audio_codec_encoder`, and `context_encoder` (named in
+#               the header comment) were NOT seen. Do NOT treat this
+#               file as a complete or byte-exact copy.
+#
+# To obtain the authoritative full text at any time, run:
+#   sudo docker run --rm --entrypoint /bin/bash \
+#     nvcr.io/nvidia/riva/riva-speech:2.26.0-l4t-aarch64 -c \
+#     'cat /usr/local/lib/python3.12/dist-packages/servicemaker/configs/tts/base.yaml'
+# and replace this file with the output.
+# =====================================================================
+
+# ------------------------- [VERIFIED] header -------------------------
+# Supported pipeline: Magpie TTS (single-encoder and multi-encoder, including zero-shot).
+#   Optional modules: neuralg2p, audio_codec_encoder, context_encoder (zero-shot).
+#
+# Usage (when build CLI uses TTS config path):
+#   python -m servicemaker.cli.build_hydra --config-path=configs/tts --config-name=base output_path=out.rmir source_path=[model.riva]
+#
+# Override as needed, e.g. voice_name=..., sample_rate=44100, is_zero_shot=true.
+
+# --------------------- [VERIFIED] first ~60 lines --------------------
+# (keys and defaults as observed; values not captured are marked)
+pipeline: speech_synthesis
+output_path: ???            # (value not captured; overridden on every build anyway)
+source_path: ???            # (list; accepts .riva and .nemo entries)
+force: ???                  # (value not captured)
+verbose: ???                # (value not captured)
+language_code: en-US
+instance_group_count: 1
+kind: KIND_GPU
+transcript_decoder_layers: "3,4,5,6,7,8"
+context_decoder_layers: "0,1,2,9,10,11"
+history_future: 5
+multilingual: false
+is_zero_shot: false
+language_archive_path: null
+multi_char_tokenizer_offset: null
+context_embedding_path: null
+voice_map_file: null        # (required for zero-shot)
+n_timesteps: 32
+platform_aarch: false
+preprocessor:
+  max_batch_size: 8
+  opt_batch_size: 8
+  mapping_path: mapping.txt
+  # ... remainder of preprocessor sub-tree NOT recovered ...
+
+# ------------------------- [NOT RECOVERED] tail ----------------------
+# Everything past the preprocessor block is unknown. Based on the header
+# comment ("Optional modules: neuralg2p, audio_codec_encoder,
+# context_encoder") the tail very likely contains optional sub-configs
+# for those modules (e.g. how the low-frame-rate speech codec wires into
+# the audio_codec_encoder module), but their key names were never
+# observed. See NOTES.md "Unknowns and risks" for how the scripts work
+# around this (inline nemo2riva options with audio_codec, and the
+# two-step nemo2riva --audio-codec path).
