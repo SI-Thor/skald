@@ -47,6 +47,10 @@ different client, a different phase, or a different product entirely.
   Cheap once Lane B's renderer exists. Fits: offline listening, driving.
 - **NIM drop-in when ARM64 lands** — re-run the benchmark scorecard against NIM speech
   containers. Trigger is external (NVIDIA shipping), so this is a re-check, not work.
+  *Update 2026-10-28 (later):* NIM prereqs now list ARM64 CPUs and a ProArt x86 laptop
+  joined the fleet — see ADR-0008 for the two concrete evaluation paths; this idea
+  graduated from "wait for trigger" to "scheduled experiment." Re-check everything
+  after GTC DC (Nov 30–Dec 3, 2026).
 - **Broadcast-style mic processing for Linux calls** (PipeWire/WebRTC denoise on the
   Thor as a system audio node) — out of scope for skald (NVIDIA Broadcast is
   Windows-only), but the Thor could host the Linux equivalent for a client whose calls
@@ -64,3 +68,22 @@ different client, a different phase, or a different product entirely.
 - Coqui/XTTS as an engine (ADR-0003/0005) — dead project, license-restricted.
 - NIM dependency today (ADR-0006) — x86 + enterprise license; revisit on ARM64.
 - Reader-mode UI — the owner explicitly doesn't use it; page-as-is with highlighting.
+
+## Added 2026-10-28 (later, from the NVIDIA toolkit survey)
+
+- **TAO Toolkit — per-client custom TTS voices.** Fine-tune brand voices for client
+  installs; a sellable SI-Thor service ("your narrator"). Tile: business, post-Phase-2.
+- **NGC private registry — SI-Thor distribution backbone.** Push adapted per-client
+  images; technicians pull on site. Tile: deployment story for every install, not just
+  skald. Alternative: GitHub Container Registry if NGC gating is annoying.
+- **Nsight Systems — benchmark profiling.** Fold into `benchmark/` to see where
+  time-to-first-audio actually goes (GPU vs queue vs synthesis). Tile: Phase 2.
+- **LAN worker trust boundary.** Shared-secret or wireguard between daemon and
+  upstream workers before any client-site deployment (raised by ADR-0008).
+- **Riva L4T early-access experiment on Thor.** Gated build; one evening to try the
+  l4t-aarch64 speech containers; adopt only if benchmark-worthy and licensable.
+- **Omniverse Audio2Face talking avatar.** Only if a future client wants a face with
+  the voice. Tile: other installs.
+- **Isaac / Metropolis / Clara / DRIVE as install families.** Not skald — but the
+  "technicians installing hardware" business will meet these on other jobs; the tiles
+  methodology (ADR-0007) applies to them exactly as it does here.

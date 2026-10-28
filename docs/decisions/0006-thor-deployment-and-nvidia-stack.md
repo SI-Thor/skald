@@ -1,6 +1,8 @@
 # ADR 0006 — Deployment on Jetson Thor; adopt NVIDIA patterns, not NVIDIA stacks (yet)
 
 - **Status:** Accepted (2026-10-28)
+- **Refined by:** ADR-0008 (2026-10-28, later): NIM prerequisites now list ARM64 CPUs,
+  so the "NIM is x86-only" premise below is outdated — the decision itself stands.
 
 ## Context
 

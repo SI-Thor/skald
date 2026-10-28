@@ -44,7 +44,9 @@ The goal is the *feel*: the control surface must be right before anything else g
 
 - Local-LLM text prep on Lane A (opt-in): abbreviation expansion, citation stripping,
   style/reading-speed adaptation by content
-- NIM drop-in evaluation when ARM64 speech containers land
+- NIM/Riva evaluation per ADR-0008: speech NIMs on the ProArt laptop (Path A) + one
+  ARM64-on-Thor container experiment (Path B); adopt only via benchmark scorecard;
+  re-check after GTC DC (Nov 30–Dec 3, 2026)
 - LAN clients (phone/other machines) as first-class consumers
 
 ## Open questions (owner to confirm)
