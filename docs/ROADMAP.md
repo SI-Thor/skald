@@ -8,13 +8,24 @@ Control-surface spec agreed; two-lane architecture agreed; engine strategy and
 deployment stance decided (ADRs 0001–0008); research findings recorded; this repo
 created with the tiles methodology in place.
 
-## Live track — Riva/Magpie engine bring-up (in progress, 2026-10-28)
+## Live track — Riva/Magpie engine ✅ (2026-10-29)
 
-The owner brought a Riva 2.26 setup that turned out to be a false start; the
-evening session mapped the real embedded stack, found a login-free deployment
-route (HF checkpoint + in-image toolchain), and produced the deploy toolkit in
-`daemon/riva-deploy/`. Status: build/deploy/serve/probe scripts ready; engine
-build in progress. See `docs/research/2026-10-28d-riva-magpie-thor-deployment.md`.
+The skald has a voice: NVIDIA's TRT-LLM prebuilt for Thor
+(`models_tts_magpie_multilingual_ipa:2.26.0-tegra-thor`) serving via Riva —
+**Whisper-verified intelligible**, cold TTFA 0.150 s, RTF 0.55, 20/20
+stability, **emotion-styled voices** (Mia/Jason × Neutral/Calm/Angry/Happy/
+Sad). The full war story (15-layer repair, the babble correction, the NGC
+CLI unlock) is in `docs/research/2026-10-28d…2026-10-29c` and
+`daemon/riva-deploy/`. NGC pulling is now one command (native ARM64 CLI +
+env auth — see research note c).
+
+## Phase 1 status (2026-10-29)
+
+- [x] Engine: Riva Magpie official prebuilt, live, verified
+- [x] Benchmark harness + ASR intelligibility gate
+- [x] Extension v0.1.0 (control bar; needs browser smoke test)
+- [~] Daemon bridge (OpenAI-compatible /v1/audio/speech over Riva) — building
+- [ ] Extension ↔ daemon end-to-end; AMO signing; owner daily-use exit test
 
 ## Explorations
 
