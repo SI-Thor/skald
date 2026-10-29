@@ -36,6 +36,9 @@ as early-access L4T builds.
 
 ## Consequences
 
+- **Live instance (2026-10-29):** the last-mile project's ProArt is the first
+  real client of this topology — see `docs/adapting/last-mile.md`.
+
 - The extension and all clients stay unchanged regardless of where engines run —
   the federation is entirely daemon-side.
 - LAN trust model becomes real: worker registration needs a shared-secret or

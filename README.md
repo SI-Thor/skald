@@ -10,6 +10,12 @@ running on an **NVIDIA Jetson AGX Thor** (Blackwell GPU, 128 GB unified memory, 
 It replaces the "Read Aloud" Firefox extension with something better suited to one
 user's habits, and grows into a shared voice service the whole machine (and LAN) can use.
 
+## Adapting skald for other projects
+
+**[docs/adapting/last-mile.md](docs/adapting/last-mile.md)** — builder's
+guide for using skald's voice stack from the last-mile distributed-sim
+project (what's reusable today, what to add, topology advice, honest gaps).
+
 ## Agents start here
 
 **[AGENTS.md](AGENTS.md)** — onboarding for AI agents (and the fastest human
