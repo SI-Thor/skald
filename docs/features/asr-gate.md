@@ -22,11 +22,13 @@ text ──▶ TTS engine ──▶ WAV ──▶ ASR (faster-whisper) ──▶
    accept if ≈ text (fuzzy) ◀───────┘
 ```
 
-- **Where**: `benchmark/` scorecard (per-engine intelligibility row);
-  `daemon/server/test_smoke.py` (deployment smoke test — the daemon itself
-  must speak intelligibly, not just return bytes);
-  `~/src/skald-riva/work/offline_synth.py` (pure-python synthesis bypass for
-  isolating server-vs-model faults).
+- **Where today**: `daemon/server/test_smoke.py` (deployment smoke test —
+  the daemon must speak intelligibly, not just return bytes; needs a
+  faster-whisper venv: `python3 -m venv /tmp/whisperenv &&
+  /tmp/whisperenv/bin/pip install faster-whisper`); offline isolation tool
+  `offline_synth.py` (referenced in research note 2026-10-29b).
+- **Where next**: a benchmark intelligibility phase + scorecard column
+  (design settled, not yet wired into `benchmark/harness.py`).
 - **Threshold**: tiny.en-level ASR agreement is the floor (homophone-level
   divergence = pass; hallucinated or empty = fail). Higher-quality ASR can
   tighten the gate.

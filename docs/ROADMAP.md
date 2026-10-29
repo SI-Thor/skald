@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated: 2026-10-28 (evening)
+Updated: 2026-10-29 (late evening)
 
 ## Phase 0 — Spec & repo foundation ✅ (2026-10-28)
 
@@ -24,7 +24,7 @@ env auth — see research note c).
 - [x] Engine: Riva Magpie official prebuilt, live, verified
 - [x] Benchmark harness + ASR intelligibility gate
 - [x] Extension v0.1.0 (control bar; needs browser smoke test)
-- [~] Daemon bridge (OpenAI-compatible /v1/audio/speech over Riva) — building
+- [x] Daemon bridge v0 (OpenAI-compatible /v1/audio/speech over Riva) — live as systemd service
 - [ ] Extension ↔ daemon end-to-end; AMO signing; owner daily-use exit test
 
 ## Explorations

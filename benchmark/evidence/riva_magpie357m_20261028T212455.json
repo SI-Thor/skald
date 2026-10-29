@@ -1,0 +1,390 @@
+{
+  "schema_version": 1,
+  "harness_version": "0.1.0",
+  "started_at": "2026-10-28T20:41:52-08:00",
+  "label": "magpie357m",
+  "engine": {
+    "name": "riva",
+    "voice": "Magpie-Opensource.Speaker0",
+    "language_code": "en-US",
+    "sample_rate_hz": 22050,
+    "params": {
+      "uri": "localhost:50051",
+      "use_ssl": false
+    }
+  },
+  "env": {
+    "captured_at": "2026-10-28T20:41:47-08:00",
+    "platform": {
+      "device_model": "NVIDIA Jetson AGX Thor Developer Kit",
+      "os": "Ubuntu 24.04.5 LTS",
+      "kernel": "6.8.12-1021-tegra",
+      "machine": "aarch64",
+      "l4t_release": "R39.2.1",
+      "jetpack": "7.2.1-b49"
+    },
+    "power_mode": {
+      "available": true,
+      "mode": "120W",
+      "mode_id": 1
+    },
+    "clocks": {
+      "jetson_clocks_state": "no_marker",
+      "method": "presence of /tmp/l4t_dfs_frequence_boost",
+      "detail": "/tmp/l4t_dfs_frequence_boost absent: treated as clocks NOT locked. Method note: the marker is what the L4T jetson_clocks script historically touches; newer L4T builds may lock clocks without it. Cross-check cpu_freq_range_mhz in the tegrastats sample \u2014 widely varying CPU frequencies are consistent with unlocked DVFS."
+    },
+    "tegrastats": {
+      "available": true,
+      "sampled_seconds": 5.0,
+      "interval_ms": 500,
+      "lines_sampled": 9,
+      "avg_cpu_util_pct": 2.8,
+      "avg_gpu_util_pct": null,
+      "avg_emc_util_pct": null,
+      "avg_cpu_temp_c": 33.0,
+      "avg_gpu_temp_c": 33.8,
+      "avg_tj_temp_c": 33.8,
+      "avg_power_mw": 21973,
+      "cpu_freq_range_mhz": [
+        972,
+        1620
+      ],
+      "gpu_emc_note": "tegrastats on this platform reports no GR3D_FREQ/EMC fields; GPU/EMC utilization not captured (CPU%, thermals and power rails were)"
+    }
+  },
+  "cold": {
+    "text_words": 9,
+    "ttfa_s": 0.181776,
+    "wall_time_s": 7.091535,
+    "chunk_count": 215,
+    "audio_bytes": 878592,
+    "audio_duration_s": 19.922721,
+    "rtf": 0.355952,
+    "error": null
+  },
+  "short_sentences": {
+    "count": 8,
+    "failures": [],
+    "ttfa_s": [
+      0.096316,
+      0.212769,
+      0.218662,
+      0.225126,
+      0.2282,
+      0.086582,
+      0.125656,
+      0.212786
+    ],
+    "ttfa_mean_s": 0.175762,
+    "ttfa_median_s": 0.212777,
+    "ttfa_min_s": 0.086582,
+    "ttfa_max_s": 0.2282,
+    "mean_rtf": 0.396378,
+    "calls": [
+      {
+        "text_words": 9,
+        "ttfa_s": 0.096316,
+        "wall_time_s": 7.290705,
+        "chunk_count": 216,
+        "audio_bytes": 882688,
+        "audio_duration_s": 20.015601,
+        "rtf": 0.364251,
+        "error": null
+      },
+      {
+        "text_words": 9,
+        "ttfa_s": 0.212769,
+        "wall_time_s": 14.904374,
+        "chunk_count": 250,
+        "audio_bytes": 1021952,
+        "audio_duration_s": 23.173515,
+        "rtf": 0.643164,
+        "error": null
+      },
+      {
+        "text_words": 9,
+        "ttfa_s": 0.218662,
+        "wall_time_s": 2.135583,
+        "chunk_count": 62,
+        "audio_bytes": 251904,
+        "audio_duration_s": 5.712109,
+        "rtf": 0.373869,
+        "error": null
+      },
+      {
+        "text_words": 8,
+        "ttfa_s": 0.225126,
+        "wall_time_s": 7.008028,
+        "chunk_count": 210,
+        "audio_bytes": 858112,
+        "audio_duration_s": 19.458322,
+        "rtf": 0.360156,
+        "error": null
+      },
+      {
+        "text_words": 11,
+        "ttfa_s": 0.2282,
+        "wall_time_s": 3.291567,
+        "chunk_count": 98,
+        "audio_bytes": 399360,
+        "audio_duration_s": 9.055782,
+        "rtf": 0.363477,
+        "error": null
+      },
+      {
+        "text_words": 9,
+        "ttfa_s": 0.086582,
+        "wall_time_s": 7.54796,
+        "chunk_count": 229,
+        "audio_bytes": 935936,
+        "audio_duration_s": 21.223039,
+        "rtf": 0.355649,
+        "error": null
+      },
+      {
+        "text_words": 12,
+        "ttfa_s": 0.125656,
+        "wall_time_s": 7.565837,
+        "chunk_count": 233,
+        "audio_bytes": 948224,
+        "audio_duration_s": 21.501678,
+        "rtf": 0.351872,
+        "error": null
+      },
+      {
+        "text_words": 8,
+        "ttfa_s": 0.212786,
+        "wall_time_s": 7.810122,
+        "chunk_count": 236,
+        "audio_bytes": 960512,
+        "audio_duration_s": 21.780317,
+        "rtf": 0.358586,
+        "error": null
+      }
+    ]
+  },
+  "sustained_passage": {
+    "text_words": 495,
+    "ttfa_s": 0.22646,
+    "wall_time_s": 118.014158,
+    "chunk_count": 2094,
+    "audio_bytes": 8534016,
+    "audio_duration_s": 193.515102,
+    "rtf": 0.609845,
+    "error": null
+  },
+  "long_doc_stability": {
+    "repeat_count": 20,
+    "iterations_completed": 20,
+    "total_words": 9900,
+    "audio_duration_median_s": 196.255057,
+    "wall_time_total_s": 2400.140556,
+    "pass": true,
+    "failures": [],
+    "iterations": [
+      {
+        "text_words": 495,
+        "ttfa_s": 0.195219,
+        "wall_time_s": 108.309935,
+        "chunk_count": 2172,
+        "audio_bytes": 8865792,
+        "audio_duration_s": 201.038367,
+        "rtf": 0.538753,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.209572,
+        "wall_time_s": 112.877528,
+        "chunk_count": 2093,
+        "audio_bytes": 8542208,
+        "audio_duration_s": 193.700862,
+        "rtf": 0.582741,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.183952,
+        "wall_time_s": 112.99334,
+        "chunk_count": 2107,
+        "audio_bytes": 8603648,
+        "audio_duration_s": 195.094059,
+        "rtf": 0.579174,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.187895,
+        "wall_time_s": 117.705398,
+        "chunk_count": 2258,
+        "audio_bytes": 9197568,
+        "audio_duration_s": 208.561633,
+        "rtf": 0.564367,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.159937,
+        "wall_time_s": 100.64537,
+        "chunk_count": 2064,
+        "audio_bytes": 8415232,
+        "audio_duration_s": 190.821587,
+        "rtf": 0.527432,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.208963,
+        "wall_time_s": 116.55659,
+        "chunk_count": 2161,
+        "audio_bytes": 8824832,
+        "audio_duration_s": 200.109569,
+        "rtf": 0.582464,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.104542,
+        "wall_time_s": 109.921446,
+        "chunk_count": 2098,
+        "audio_bytes": 8558592,
+        "audio_duration_s": 194.072381,
+        "rtf": 0.566394,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.220135,
+        "wall_time_s": 125.716193,
+        "chunk_count": 2172,
+        "audio_bytes": 8857600,
+        "audio_duration_s": 200.852608,
+        "rtf": 0.625913,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.152895,
+        "wall_time_s": 133.601456,
+        "chunk_count": 2224,
+        "audio_bytes": 9062400,
+        "audio_duration_s": 205.496599,
+        "rtf": 0.65014,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.214839,
+        "wall_time_s": 127.983789,
+        "chunk_count": 2066,
+        "audio_bytes": 8419328,
+        "audio_duration_s": 190.914467,
+        "rtf": 0.670372,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.182799,
+        "wall_time_s": 117.010675,
+        "chunk_count": 2238,
+        "audio_bytes": 9136128,
+        "audio_duration_s": 207.168435,
+        "rtf": 0.564809,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.218148,
+        "wall_time_s": 106.676353,
+        "chunk_count": 2138,
+        "audio_bytes": 8710144,
+        "audio_duration_s": 197.508934,
+        "rtf": 0.540109,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.143928,
+        "wall_time_s": 124.454429,
+        "chunk_count": 2229,
+        "audio_bytes": 9091072,
+        "audio_duration_s": 206.146757,
+        "rtf": 0.603718,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.187393,
+        "wall_time_s": 119.131363,
+        "chunk_count": 2113,
+        "audio_bytes": 8611840,
+        "audio_duration_s": 195.279819,
+        "rtf": 0.610055,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.210534,
+        "wall_time_s": 114.245755,
+        "chunk_count": 2102,
+        "audio_bytes": 8579072,
+        "audio_duration_s": 194.53678,
+        "rtf": 0.587271,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.104505,
+        "wall_time_s": 117.844265,
+        "chunk_count": 2096,
+        "audio_bytes": 8558592,
+        "audio_duration_s": 194.072381,
+        "rtf": 0.607218,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.191722,
+        "wall_time_s": 143.331589,
+        "chunk_count": 2097,
+        "audio_bytes": 8554496,
+        "audio_duration_s": 193.979501,
+        "rtf": 0.738901,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.229486,
+        "wall_time_s": 118.257801,
+        "chunk_count": 2113,
+        "audio_bytes": 8632320,
+        "audio_duration_s": 195.744218,
+        "rtf": 0.604145,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.207387,
+        "wall_time_s": 119.499626,
+        "chunk_count": 2127,
+        "audio_bytes": 8677376,
+        "audio_duration_s": 196.765896,
+        "rtf": 0.607319,
+        "error": null
+      },
+      {
+        "text_words": 495,
+        "ttfa_s": 0.270065,
+        "wall_time_s": 153.377655,
+        "chunk_count": 2148,
+        "audio_bytes": 8734720,
+        "audio_duration_s": 198.066213,
+        "rtf": 0.774376,
+        "error": null
+      }
+    ]
+  },
+  "failures_total": 0,
+  "finished_at": "2026-10-28T21:24:55-08:00",
+  "run_id": "riva_magpie357m_20261028T212455"
+}

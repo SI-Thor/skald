@@ -1,10 +1,12 @@
 # benchmark/ — on-device TTS engine scorecard
 
-Status: **harness built and verified green on this Thor with the mock engine**
-(2026-10-28). The `riva` engine adapter is written against the documented
-Riva 2.x API but unverified against a live server — see
-[What's unverified](#whats-unverified). Spec: ADR-0005 (engine strategy) and
-ADR-0010 (Thor-first: no benchmark number without power context).
+Status (2026-10-29): **live-verified** — all four phases pass against the
+production Riva server (voice `Magpie-Multilingual.EN-US.Mia`), and the mock
+engine keeps the harness itself testable offline. Curated evidence lives in
+`evidence/` (committed); raw run JSONs land in `results/` (gitignored —
+redirect with `--results-dir` if you want them elsewhere). Spec: ADR-0005
+(engine strategy) and ADR-0010 (Thor-first: no benchmark number without
+power context).
 
 Published RTF numbers come from datacenter GPUs (e.g. fish-speech S2-Pro's
 0.195 is an H200 figure) and do not transfer to the Thor's embedded
@@ -21,7 +23,8 @@ actual target hardware, in the power state it will actually run in.
 | `report.py` | Renders the Markdown scorecard from all result JSONs |
 | `quality-form.md` | Subjective 1–5 rating template (paper / news / story) |
 | `run` | Shell launcher; `pyproject.toml` optional `[riva]` extra |
-| `results/` | Result JSONs + probe WAVs — **gitignored, never committed** |
+| `results/` | Raw run output — gitignored (write location; redirect via `--results-dir`) |
+| `evidence/` | **Committed** scorecard + canonical run JSONs backing doc claims |
 
 ## Quickstart (verified on this host)
 
@@ -99,7 +102,7 @@ Exit codes: `0` all phases clean, `1` phases ran but failures recorded
 | Flag | Default | Meaning |
 |---|---|---|
 | `--engine` | `mock` | `mock` or `riva` |
-| `--voice` | engine default | voice name (`sine` / e.g. `English-US.Female-1`) |
+| `--voice` | engine default | voice name (`sine` / e.g. `Magpie-Multilingual.EN-US.Mia` (live names: `curl localhost:8000/v1/voices`)) |
 | `--language-code` | `en-US` | passed through to the engine |
 | `--riva-uri` | `localhost:50051` | gRPC endpoint |
 | `--label` | `run` | baked into the result filename |

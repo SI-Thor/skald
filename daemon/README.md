@@ -1,16 +1,13 @@
 # daemon/ — the skald voice & content daemon
 
-Status: not started (Phase 1 for Lane A, Phase 3 for Lane B).
-Spec: ADR-0002 (OpenAI-compatible API), ADR-0003 (two lanes), ADR-0005 (engines),
-ADR-0006 (deployment).
+> **Status (2026-10-29): Lane A RUNNING in production** — `server/` v0.1.0
+> live as `skald-daemon.service` on :8000 (verified: `test_smoke.py` incl. the
+> ASR intelligibility gate). Lane B (podcast jobs) and Lane C (live show)
+> are designed (ADR-0003, lane-c-sim) but not implemented here yet.
 
-Will contain the FastAPI service(s) run on the Thor via docker compose
-(jetson-containers base):
+`server/` — OpenAI-compatible bridge in front of Riva (see its README; env
+overrides; options documented for LAN clients).
 
-- Lane A: `POST /v1/audio/speech` (streaming, sentence-at-a-time), `GET /v1/voices`
-- Lane B: `POST /v1/jobs` podcast factory (extract → chunked LLM script → render →
-  stitch → MP3) with status/download endpoints
-- Shared: voice registry (base + cloned voices, per-engine license metadata), text
-  pipeline (segmentation, normalization, citation stripping), Docling PDF extraction
-
-Phase 1 ships Lane A only, with Kokoro as the fast-tier engine.
+Planned next: streaming passthrough of Riva's `/v1/audio/synthesize_online`
+(raw PCM chunks), Lane B job endpoints, Lane C show endpoint once ADR-0009
+lands.

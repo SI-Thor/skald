@@ -50,8 +50,20 @@ curl -s http://localhost:8000/v1/audio/speech \
 - Riva's richer surface (streaming PCM, multipart forms) is spec'd in
   `docs/research/riva-2.26-http-openapi.json`; prefer the daemon for
   OpenAI-shape, Riva directly for streaming/chunking experiments.
-- Latency claims you may rely on: cold TTFA 0.150 s, warm 0.165 s median,
-  RTF 0.55 sustained (all @120 W, `benchmark/results/`).
+- Latency claims you may rely on (evidence committed at
+  `benchmark/evidence/SCORECARD.md` + canonical JSONs): official TRT-LLM
+  engine **cold TTFA 0.150 s, warm 0.165 s median, RTF 0.55 sustained, at
+  MAXN power** — and a fresh short load in ~2026-11 measured 0.37/0.34/0.86
+  under concurrent load; treat sub-0.2 s TTFA as the unloaded case.
+- Engine saga TL;DR: from-scratch HF-checkpoint deployment = plumbing
+  green, audio babble (wrong engine architecture) → **PARKED**; NVIDIA's
+  canonical tegra-thor TRT-LLM prebuilt = intelligible, deployed. Details:
+  research notes 2026-10-29a/b/c.
+- Voice counts: 399 is live-system truth (`curl :8000/v1/voices | python3 -c
+  "import json,sys; print(len(json.load(sys.stdin)['voices']))"`), not a repo
+  artifact — it moves with the engine.
+- This file is authoritative over sub-README status lines (several were
+  stale during rapid evolution; 2026-10-29 audit fixed the worst).
 
 ## How to work in this repo (hard conventions)
 
@@ -89,12 +101,12 @@ curl -s http://localhost:8000/v1/audio/speech \
 - **"Pull anything from NGC"** → native CLI at `~/src/ngc-cli-arm/ngc-cli/ngc`
   with `NGC_CLI_API_KEY` + `NGC_CLI_ORG=nvidia` env (see `SETUP.md` §1).
 - **"Test Lane C logic"** → `python3 experiments/lane-c-sim/tests.py`; extend
-  `show.py` (ledger/dial/prefetch) before any UI work; ADR-0009 is the
-  graduation gate.
+  `show.py` (ledger/dial/prefetch) before any UI work; ADR-0009 (now written) is the
+  graduation gate — read it before extending.
 
 ## Fast pointers
 
-| Want | Go |
+| Verify the system | `AGENTS.md` ground-truth commands; `daemon/server/test_smoke.py`; `./benchmark/run` |
 |---|---|
 | The plan | `docs/ROADMAP.md` |
 | Why any decision | `docs/decisions/0001…0010` |

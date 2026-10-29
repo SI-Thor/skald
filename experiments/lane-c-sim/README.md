@@ -11,15 +11,15 @@ proven before any UI or TTS exists.
 - **Prefetch buffer** — planned-ahead turns, refilled as the playhead advances
 - **Cache economics** — prompt = stable prefix (article + sheets + bible) +
   suffix deltas; token accounting shows the prefix-dominance claim
-  (§5) with a 600-word article: prefix 296 tok vs 507 suffix across 8 turns
-  and 3 interjections — and the prefix is paid ONCE per session while the
-  real article would be 10× larger, pushing cache_ratio > 0.8
+  (§5). Measured on the toy article: prefix 296 tok vs 507 suffix across 8
+  turns / 3 interjections → cache_ratio 0.369; the prefix is paid ONCE per
+  session, so with a real 3,000–10,000-word article the ratio crosses 0.8
+  (suffix grows with conversation, prefix with document)
 
 **Run:**
 
     python3 tests.py          # semantics tests (stdlib only)
     python3 simulate.py runs/demo   # headless scripted show -> transcript + metrics
-    python3 repl.py           # (next) interactive producer session
 
 **LLM slot:** ScriptedLLM (deterministic fixtures) today; OpenAICompatLLM
 against Ollama (localhost:11434/v1) is the next drop-in — same prompt

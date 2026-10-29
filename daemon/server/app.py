@@ -5,8 +5,6 @@ Lane A contract per docs/architecture.md. Speed is a client-side concern
 """
 from __future__ import annotations
 
-import time
-
 import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import Response, StreamingResponse
@@ -81,7 +79,6 @@ async def speech(req: SpeechRequest):
         media_type="audio/wav",
         headers={
             "X-Skald-Voice": voice,
-            "X-Skald-Uptime": str(int(time.time())),
             "Content-Disposition": 'inline; filename="speech.wav"',
         },
     )

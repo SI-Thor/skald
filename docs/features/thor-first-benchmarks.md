@@ -12,10 +12,10 @@ VIN power draw. The scorecard renders it as the header above the numbers.
 Example from the live engine row:
 
 ```
-Power mode (nvpmodel): 120W (mode id 1)
+Power mode (nvpmodel): MAXN (mode id 0)
 Clocks: no_marker (not locked)
-Power draw (VIN rail): 21973 mW avg
 JetPack: 7.2.1-b49, L4T R39.2.1
+(captured from benchmark/evidence/riva_official-trtllm_20261029T001313.json)
 ```
 
 ## Why it's novel (as discipline)
@@ -23,7 +23,7 @@ JetPack: 7.2.1-b49, L4T R39.2.1
 Published engine numbers come from datacenter cards at unrestricted power —
 fish-speech S2-Pro's RTF 0.195 is an H200 figure and transfers nowhere. On
 embedded boards the same model can swing **multiples** between power modes
-(this Thor idles at 120 W; MAXN unlocks the ceilings) and thermal states. A
+(this Thor's default cap is 120 W — idle draw is ~22 W; MAXN unlocks the ceilings) and thermal states. A
 benchmark without context isn't pessimistic or optimistic — it's *not a
 number*.
 

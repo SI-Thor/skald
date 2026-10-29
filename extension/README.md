@@ -50,7 +50,7 @@ Then open any article, press Alt+R.
 - **Engines** (`src/engines/`): `speak(text, opts, { onboundary, onend,
   onerror })` interface. System engine = `speechSynthesis` (with
   voiceschanged wait, utterance GC workaround, pause/resume). Daemon engine
-  probes `GET /v1/voices` at `http://localhost:50000`, marks itself
+  probes `GET /v1/voices` at `http://localhost:8000`, marks itself
   unavailable on failure (greyed "unreachable" in the dropdown, silent
   fallback to system voices), `POST /v1/audio/speech` audio played via
   data-URL `<audio>` with client-side `playbackRate` + `preservesPitch`.
@@ -64,7 +64,7 @@ Then open any article, press Alt+R.
 
 - **Detach to window** — disabled stub button in row 3 (ADR-0004 behavior,
   needs a separate control window host; deferred).
-- **Daemon itself** — `daemon/` is not implemented yet; the engine assumes an
+- **Detached window** — stub (planned); the engine assumes an
   OpenAI-compatible `GET /v1/voices` + `POST /v1/audio/speech` (JSON
   `{ model, input, voice, response_format, pitch }`, audio bytes returned).
   It tolerates several voices-payload shapes and falls back cleanly when the
@@ -107,7 +107,7 @@ manifest error rather than an ignorable extra property, remove it from
 
 ```
 manifest.json            MV3, permissions: activeTab/storage/scripting,
-                         host_permissions: localhost:50000, Alt+R command,
+                         host_permissions: localhost:8000, Alt+R command,
                          web_accessible_resources for src/*, min Firefox 140
 background.js            injection + daemon fetch proxy (event page)
 content/loader.js        classic bootstrap → dynamic import of src/main.js
@@ -118,7 +118,7 @@ src/player.js            sentence cursor, live params, debounced restart
 src/store.js             browser.storage.local settings
 src/engines/engine.js    engine interface + helpers
 src/engines/system-engine.js   speechSynthesis engine
-src/engines/daemon-engine.js   localhost:50000 OpenAI-compatible engine
+src/engines/daemon-engine.js   localhost:8000 OpenAI-compatible engine
 src/control-bar/bar.js   shadow-DOM control bar (ADR-0004 layout)
 src/control-bar/bar.css  bar styles (dark, compact)
 src/control-bar/sliders.js    slider factory with live readouts

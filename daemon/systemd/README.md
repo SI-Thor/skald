@@ -8,4 +8,4 @@
 
 Note: binds 0.0.0.0 (LAN-reachable, unauthenticated) — fine for home lab;
 add auth/reverse-proxy before client sites (ADR-0008 trust boundary tile).
-`Restart=always` (not unless-stopped — docker vocabulary, not systemd).
+`Restart=always`. The daemon binds 0.0.0.0:8000 on purpose (LAN harness).

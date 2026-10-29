@@ -2,9 +2,11 @@
 
 **Outcome first:** Riva 2.26 now serves **MagpieTTS Multilingual 357M** on the
 Jetson Thor — 5 speakers × 12 languages, TensorRT engines, measured at
-**cold TTFA 0.243 s / warm median 0.188 s / RTF ≈ 0.35** in 120 W power mode,
-first pass, zero tuning. The skald's first voice exists. Audio in
-`~/src/skald-riva/audio/` (tale.wav, probe_en-US/fr-FR/de-DE).
+**cold TTFA 0.182 s / warm median 0.213 s / sustained RTF 0.61 (20/20
+stability)** in 120 W power mode, first pass. [CORRECTION 2026-10-29b: this
+HF path's audio was NOT intelligible — these are plumbing metrics only;
+the intelligible engine is the official TRT-LLM prebuilt, note (c).] Audio
+from this path in `~/src/skald-riva/audio/` (tale.wav, probe_*).
 
 ## Method note (the part worth keeping)
 
@@ -33,9 +35,10 @@ The full 15-layer root-cause table lives in
 
 | Metric | Value | Context |
 |---|---|---|
-| Cold TTFA | 0.243 s | first request after load |
-| Warm TTFA (median/min/max) | 0.188 / 0.080 / 0.223 s | 8 short sentences |
-| RTF sustained | ≈ 0.35 | 120 W mode, jetson_clocks NOT applied |
+| Cold TTFA | 0.182 s | first request after load |
+| Warm TTFA (median/min/max) | 0.213 / 0.087 / 0.229 s | 8 short sentences |
+| RTF sustained | 0.61 | 120 W mode, jetson_clocks NOT applied |
+| (Earlier partial runs quoted 0.243/0.188/0.35 — from a run whose long-doc phase failed; superseded by the complete run) | | |
 | Long-doc stability | see benchmark results JSON | 20× 495-word passages |
 | Server caps discovered | 2000 chars/request, 400 tokens/sentence | client chunks (~350 chars, sentence-first) — Lane A streams this way anyway |
 

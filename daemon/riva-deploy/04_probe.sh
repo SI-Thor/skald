@@ -55,7 +55,7 @@ echo "----------------"
 # Voice selection: forced VOICE env wins; else first line mentioning magpie;
 # else first non-empty line. (talk.py list format not verified - heuristic.)
 if [[ -z "$VOICE" ]]; then
-  VOICE=$(grep -i -m1 'magpie' /tmp/skald_probe_voices.txt | awk '{print $1}' | tr -d '\r' || true)
+  VOICE=$(grep -i -m1 'magpie' /tmp/skald_probe_voices.txt | awk '{print $1}' | tr -d '",\r' || true)
   [[ -z "$VOICE" ]] && VOICE=$(awk 'NF{print $1; exit}' /tmp/skald_probe_voices.txt | tr -d '\r')
 fi
 echo "    probe voice: $VOICE"

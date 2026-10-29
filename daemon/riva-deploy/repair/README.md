@@ -5,13 +5,19 @@ start?" — peeled fifteen failure layers. This directory is the complete,
 reproducible repair chain for a fresh `02_deploy_repo.sh` output, plus the
 story, because the *reasoning* is the reusable part (ADR-0007).
 
-## Status: WORKING
+## Status: PARKED (superseded by the canonical TRT-LLM prebuilt)
+
+The serving chain this repairs is fully operational — but its audio was
+**not intelligible** (wrong engine architecture for this model's Thor
+deployment; the canonical prebuilt won — see `docs/research/2026-10-29b/c`).
+Kept as a tile: the repair techniques are load-bearing for any future
+from-source deployment, and the 15-layer root-cause table is the
+telephone-judo textbook.
 
 - Server: `skald-riva` container, gRPC :50051 / HTTP :50000, auto-restart.
 - Voices: `Magpie-Opensource.Speaker0..4`, 12 languages.
-- Measured (first pass, 120W power mode, unoptimized):
-  cold TTFA **0.243 s**, warm TTFA median **0.188 s** (min 0.080),
-  RTF ≈ **0.35** (≈2.9× faster than real time).
+- Measured (plumbing only — see parked banner): cold TTFA 0.182 s,
+  warm median 0.213 s, sustained RTF 0.61, 20/20 stability @120 W.
 
 ## The fifteen layers (root causes, in order encountered)
 
