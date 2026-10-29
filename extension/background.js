@@ -4,13 +4,13 @@
 //   1. Alt+R command / toolbar click → inject the content-script bootstrap
 //      (content/loader.js) plus the sentence-highlight stylesheet.
 //   2. CORS-free proxy for daemon traffic: the content script cannot fetch
-//      http://localhost:50000 directly, so it sends 'skald:daemon-fetch'
+//      http://localhost:8000 directly, so it sends 'skald:daemon-fetch'
 //      messages and this page performs the fetch using host_permissions.
 
 'use strict';
 
 const api = typeof browser !== 'undefined' ? browser : chrome;
-const DAEMON_BASE = 'http://localhost:50000';
+const DAEMON_BASE = 'http://localhost:8000';
 
 // Tabs where src/highlight.css is currently present. Best-effort: cleared on
 // navigation (status 'loading') and tab close so a fresh page gets re-inserted.

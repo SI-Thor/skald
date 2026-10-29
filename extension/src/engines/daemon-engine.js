@@ -1,4 +1,4 @@
-// skald — daemon engine: OpenAI-compatible local TTS at localhost:50000.
+// skald — daemon engine: OpenAI-compatible local TTS at localhost:8000.
 //
 // All HTTP goes through the background page ('skald:daemon-fetch' proxy,
 // see background.js) because the content-script origin cannot fetch the
@@ -16,7 +16,7 @@
 
 import { Engine, clamp } from './engine.js';
 
-export const DAEMON_BASE_URL = 'http://localhost:50000';
+export const DAEMON_BASE_URL = 'http://localhost:8000';
 export const DEFAULT_MODEL = 'kokoro'; // placeholder until the daemon registry exists
 
 export class DaemonEngine extends Engine {
@@ -78,7 +78,7 @@ export class DaemonEngine extends Engine {
       if (!this._available) {
         handlers.onerror &&
           handlers.onerror(
-            new Error('skald daemon unreachable (localhost:50000) — switch engine or start the daemon')
+            new Error('skald daemon unreachable (localhost:8000) — switch engine or start the daemon')
           );
         return;
       }

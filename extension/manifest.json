@@ -16,7 +16,7 @@
     "96": "icons/icon-96.png"
   },
   "permissions": ["activeTab", "storage", "scripting"],
-  "host_permissions": ["http://localhost:50000/*"],
+  "host_permissions": ["http://localhost:8000/*", "http://localhost:50000/*"],
   "background": {
     "scripts": ["background.js"]
   },
