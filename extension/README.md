@@ -44,9 +44,9 @@ Then open any article, press Alt+R.
   initial }` + max z-index), compact dark 3-row layout per ADR-0004 —
   row 1: grip ⠿, ⏮, ▶/⏸, ⏹, ⏭, volume slider, speed slider with live
   0.5x–3.0x readout, ⋯, ✕; row 2: Engine + Voice dropdowns; row 3: Pitch
-  slider, Save as defaults, Detach to window (disabled stub). ⋯ cycles
-  1 → 2 → 0 expanded rows; main row never hides. Drag via grip or empty bar
-  area with viewport clamping.
+  slider, Save as defaults, 🎭 Lane C show, Detach to window (disabled
+  stub). ⋯ cycles 1 → 2 → 0 expanded rows; main row never hides. Drag via
+  grip or empty bar area with viewport clamping.
 - **Engines** (`src/engines/`): `speak(text, opts, { onboundary, onend,
   onerror })` interface. System engine = `speechSynthesis` (with
   voiceschanged wait, utterance GC workaround, pause/resume). Daemon engine
@@ -58,7 +58,68 @@ Then open any article, press Alt+R.
   pitch, bar position in `browser.storage.local`.
 - **Background** (`background.js`): Alt+R command + toolbar click →
   `insertCSS` (highlight styles) + `executeScript` (bootstrap); CORS-free
-  fetch proxy for all daemon traffic.
+  fetch proxy for all daemon traffic; `skald:open-lane` → opens
+  `lane.html` in a tab (content scripts cannot call `tabs.create`).
+
+## Lane C — the live show (experimental)
+
+ADR-0009 layer 3: the producer surface for the produced live show
+(`docs/design/lane-c-explorations.md`, semantics pinned by
+`experiments/lane-c-sim/`).
+
+**How to open:** expand the control bar's ⋯ twice and hit **🎭** (row 3) —
+`lane.html` opens as a regular extension page in a tab (put it in a split
+view next to the article). No manifest plumbing was needed for this: it is
+an ordinary extension page, not a web-accessible resource.
+
+**Prerequisites:**
+
+- The skald daemon with the show endpoint
+  (`POST /v1/shows`, `GET /v1/shows/{id}`, `POST …/interject`,
+  `POST …/dial`, `DELETE /v1/shows/{id}`, `WS /v1/shows/{id}/ws`).
+- For `LLM: openai` the daemon needs its steering-LLM env
+  (`LANE_C_LLM_*`, e.g. an OpenAI-compatible base URL/model — ADR-0009
+  layer 2); `scripted` needs nothing beyond the endpoint.
+- Server URL comes from the existing options page setting
+  (`skald.settings.serverUrl`, default `http://localhost:8000`); REST rides
+  the background fetch proxy, the WebSocket is opened **directly from the
+  page** — extension pages are chrome-privileged origins, not subject to
+  the page-CORS rules that force content-script traffic through the proxy
+  (scheme maps http→ws / https→wss; ws:// URLs cannot be expressed in
+  `host_permissions`, so no grant is possible or needed there).
+
+**What works:**
+
+- **Start show** pulls the article from the current tab's in-page skald
+  app (press Alt+R on the article once so the content script is alive; a
+  live selection wins over the article, same as reading) and POSTs
+  `{article, cast, llm}` with the Mia & Jason reference cast from the sim.
+- **Transcript**: heard turns as speaker-colored chat bubbles
+  (Mia `#f5a623`, Jason `#6fb3f2`, PRODUCER `#7bc96f`, others hashed),
+  pending turns dimmed italic "(planned)", auto-scroll with stick-to-bottom.
+- **Producer box**: free text asks the room, `@Name …` routes to one
+  character (`POST /v1/shows/{id}/interject`, repl.py shorthand); sent
+  interjections echo locally as PRODUCER bubbles until the next server
+  snapshot reconciles the ledger.
+- **Interrupt dial**: cut now / wrap thought / let finish as a segmented
+  control (`POST /v1/shows/{id}/dial`, optimistic with revert-on-error).
+- **Status strip** (poll every 5 s, WS events in between): heard /
+  planned / discarded counts + llm calls, live/reconnecting chip.
+- **Lifecycle**: WS auto-reconnects every 3 s while a session exists;
+  reload reattaches via `sessionStorage`; **End show** DELETEs the show and
+  tears the socket down.
+
+**What's next (not built here):**
+
+- **Real sidebar**: `lane.html`-in-a-tab is the cross-browser v0. The
+  upgrade path is `sidebar_action` (Firefox) / `chrome.sidePanel` (Chrome)
+  hosting the same page — one code path either way, so the switch is
+  manifest + open-button work only.
+- **Voice rendering of turns**: the TTS hookup (turns spoken through the
+  existing engine/voice-slot stack) is a later layer; the transcript is
+  text-only for now.
+- Character cards / green room (§1 of the explorations doc), invitation
+  turns, multi-listener rooms.
 
 ## What's stubbed / not yet built
 
@@ -109,9 +170,14 @@ manifest error rather than an ignorable extra property, remove it from
 manifest.json            MV3, permissions: activeTab/storage/scripting,
                          host_permissions: localhost:8000, Alt+R command,
                          web_accessible_resources for src/*, min Firefox 140
-background.js            injection + daemon fetch proxy (event page)
+background.js            injection + daemon fetch proxy + lane-page opener
 content/loader.js        classic bootstrap → dynamic import of src/main.js
 src/main.js              wiring: extract → segment → play → highlight → bar
+                         (+ 'skald:get-article' answer for Lane C)
+lane.html                Lane C live-show page (ADR-0009 layer 3, opened in a tab)
+lane.js                  pure show-state logic (node-testable) + page wiring:
+                         REST via background proxy, direct WebSocket
+lane.css                 lane page styles (dark, options-page kin)
 src/extraction.js        Readability-lite extraction + selection, offset maps
 src/segmenter.js         sentence segmentation (pure, node-testable)
 src/player.js            sentence cursor, live params, debounced restart

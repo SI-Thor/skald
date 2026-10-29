@@ -5,8 +5,8 @@
 //   1 (always visible): grip ⠿ | ⏮ ▶/⏸ ⏹ ⏭ | 🔈 volume | speed + live
 //     readout | ⋯ | ✕
 //   2 (⋯ expanded):   Engine dropdown + Voice dropdown
-//   3 (⋯ expanded 2): Pitch slider | Save as defaults | Detach to window
-//     (disabled stub in v0)
+//   3 (⋯ expanded 2): Pitch slider | Save as defaults | 🎭 Lane C show
+//     | Detach to window (disabled stub in v0)
 // ⋯ cycles 0 → 1 → 2 → 0 rows; the main row never hides.
 // Dragging (grip or empty bar area) moves the host with viewport clamping;
 // the final position is emitted as a 'position' event (persisted by main.js
@@ -188,7 +188,7 @@ export class ControlBar {
       this._voiceSelect
     );
 
-    // Row 3 — pitch, save defaults, detach stub.
+    // Row 3 — pitch, save defaults, Lane C show, detach stub.
     const row3 = this._row('skald-row skald-row-tuning');
     this._pitchSlider = createSlider({
       min: 0.5,
@@ -203,10 +203,18 @@ export class ControlBar {
     });
     this._saveBtn = this._btn('Save as defaults', 'Save engine, voice, speed, volume and pitch');
     this._saveBtn.classList.add('skald-btn-text');
+    this._laneBtn = this._btn('🎭', 'Lane C show');
+    this._laneBtn.classList.add('skald-btn-text');
     this._detachBtn = this._btn('Detach to window', 'Detach to window (not implemented in v0)');
     this._detachBtn.classList.add('skald-btn-text');
     this._detachBtn.disabled = true;
-    row3.append(this._label('Pitch'), this._pitchSlider.el, this._saveBtn, this._detachBtn);
+    row3.append(
+      this._label('Pitch'),
+      this._pitchSlider.el,
+      this._saveBtn,
+      this._laneBtn,
+      this._detachBtn
+    );
 
     this.barEl.append(row1, row2, row3);
     shadow.appendChild(this.barEl);
@@ -244,6 +252,8 @@ export class ControlBar {
       this._emit('save-defaults');
       this._flashSaved();
     });
+
+    this._laneBtn.addEventListener('click', () => this._emit('open-lane'));
 
     this.barEl.addEventListener('pointerdown', (e) => this._onPointerDown(e));
   }

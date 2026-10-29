@@ -19,8 +19,37 @@ import { ControlBar } from './control-bar/bar.js';
 const HIGHLIGHT_NAME = 'skald-sentence';
 const DAEMON_PROBE_TIMEOUT_MS = 1500;
 
+const api = typeof browser !== 'undefined' ? browser : chrome;
+
 let currentApp = null;
 let creating = null;
+
+// Lane C (lane.html) pulls the article this tab already extracts for
+// reading ('skald:get-article', ADR-0009 layer 3). Registered at module
+// scope: loader.js caches this module on the window, so repeated Alt+R
+// injections never stack listeners. Same selection-or-article policy as
+// reading: a live selection wins over the extracted article.
+if (api.runtime && api.runtime.onMessage) {
+  api.runtime.onMessage.addListener((msg) => {
+    if (!msg || msg.type !== 'skald:get-article') return undefined;
+    try {
+      const { text, source, title } = extract(window);
+      return Promise.resolve({
+        type: 'skald:get-article',
+        ok: Boolean(text && String(text).trim().length >= 3),
+        text: String(text || ''),
+        source: source || 'article',
+        title: title || document.title || '',
+      });
+    } catch (err) {
+      return Promise.resolve({
+        type: 'skald:get-article',
+        ok: false,
+        error: String((err && err.message) || err),
+      });
+    }
+  });
+}
 
 /**
  * Entry point called from content/loader.js on every Alt+R / toolbar click.
@@ -267,6 +296,10 @@ class App {
         break;
       case 'position':
         this.settings = await store.saveBarPosition(payload);
+        break;
+      case 'open-lane':
+        // Content scripts cannot call tabs.create; background does it.
+        api.runtime.sendMessage({ type: 'skald:open-lane' }).catch(() => {});
         break;
       default:
         break;

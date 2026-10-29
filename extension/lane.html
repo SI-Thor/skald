@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>skald — Lane C live show</title>
+  <link rel="stylesheet" href="lane.css">
+</head>
+<body>
+  <header class="lane-header">
+    <h1>🎭 Lane C — the live show</h1>
+    <span id="conn" class="lane-conn" data-state="idle">idle</span>
+    <button id="end" class="secondary danger" hidden>End show</button>
+  </header>
+
+  <section class="lane-controls" aria-label="Show controls">
+    <label for="cast">Cast</label>
+    <select id="cast"></select>
+    <label for="llm">LLM</label>
+    <select id="llm">
+      <option value="scripted">scripted</option>
+      <option value="openai">openai</option>
+    </select>
+    <button id="start">Start show</button>
+  </section>
+
+  <p id="hint" class="lane-hint"></p>
+  <p id="error" class="lane-error" hidden></p>
+
+  <main id="transcript" class="lane-transcript" aria-live="polite" aria-label="Show transcript"></main>
+
+  <section class="lane-producer" aria-label="Producer controls">
+    <div id="dial" class="lane-dial" role="group" aria-label="Interrupt dial"></div>
+    <form id="interject-form" class="lane-interject">
+      <input id="interject" type="text" autocomplete="off"
+             placeholder="Ask the room — @Mia to address one character">
+      <button type="submit">Send</button>
+    </form>
+  </section>
+
+  <footer id="status" class="lane-status">heard 0 · planned 0 · discarded 0</footer>
+
+  <script type="module" src="lane.js"></script>
+</body>
+</html>

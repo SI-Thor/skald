@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 fail=0
-for f in background.js content/loader.js src/*.js src/*/*.js options.js icons/generate.js; do
+for f in background.js lane.js content/loader.js src/*.js src/*/*.js options.js icons/generate.js; do
   cp "$f" /tmp/skald_check.mjs 2>/dev/null || cp "$f" /tmp/skald_check.js
   ext="${f##*.}"
   if [ "$ext" = "js" ]; then

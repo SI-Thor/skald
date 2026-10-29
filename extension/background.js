@@ -6,6 +6,8 @@
 //   2. CORS-free proxy for daemon traffic: the content script cannot fetch
 //      http://localhost:8000 directly, so it sends 'skald:daemon-fetch'
 //      messages and this page performs the fetch using host_permissions.
+//   3. 'skald:open-lane' → open the Lane C live-show page (lane.html) in a
+//      tab: content scripts cannot call tabs.create (ADR-0009 layer 3).
 
 'use strict';
 
@@ -67,6 +69,16 @@ api.commands.onCommand.addListener((command) => {
 
 api.action.onClicked.addListener((tab) => {
   onStartReading();
+});
+
+// Lane C: open the live-show page in a tab (from the control bar's 🎭
+// button; content scripts cannot open tabs themselves). Fire-and-forget.
+api.runtime.onMessage.addListener((msg) => {
+  if (!msg || msg.type !== 'skald:open-lane') return undefined;
+  api.tabs
+    .create({ url: api.runtime.getURL('lane.html') })
+    .catch((err) => console.error('[skald] cannot open lane page:', err && err.message));
+  return undefined;
 });
 
 // --- daemon fetch proxy -----------------------------------------------------

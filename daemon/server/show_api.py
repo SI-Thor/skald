@@ -28,6 +28,7 @@ import hashlib
 import json
 import os
 import re
+import socket
 import sys
 import time
 import urllib.error
@@ -81,7 +82,13 @@ def _env(name: str, default, cast):
 def parse_speaker_text(raw: str) -> tuple[str, str] | None:
     """Parse the mandated 'Speaker: text' shape, leniently: split on the
     first colon. None when there is no usable prefix — the caller then falls
-    back to a round-robin speaker with the raw text (sim llm.py parity)."""
+    back to a round-robin speaker with the raw text (sim llm.py parity).
+
+    Polish pass (2026-10-29 live-show warts, same as llm.py @ HEAD):
+    1) strip a duplicated "[Speaker]" bracket prefix from the text;
+    2) drop a leading parenthetical stage direction — "( Jason can respond
+       with a counterpoint )" is direction to other cast, not dialogue.
+    """
     if not raw:
         return None
     text = raw.strip()
@@ -91,6 +98,13 @@ def parse_speaker_text(raw: str) -> tuple[str, str] | None:
     speaker = speaker.strip()
     if not speaker or "\n" in speaker:
         return None
+    # models sometimes echo "[Mia] ..." after the "Mia: " prefix
+    rest = re.sub(rf"^\s*\[{re.escape(speaker)}\]\s*", "", rest)
+    # parentheticals are direction to other cast members, not dialogue
+    if rest.startswith("("):
+        close = rest.find(")")
+        if close != -1:
+            rest = rest[close + 1 :].lstrip()
     return speaker, rest.strip()
 
 
@@ -140,7 +154,7 @@ class OpenAICompatLLM(SteeringLLM):
         try:
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                 payload = resp.read()
-        except (socket_timeout := TimeoutError) if False else (socket.timeout, TimeoutError) as e:  # noqa: E999
+        except (socket.timeout, TimeoutError) as e:  # 3.10+: same class
             raise SteeringError(f"steering LLM timed out after {self.timeout:g}s ({url})") from e
         except urllib.error.HTTPError as e:
             detail = ""
@@ -183,7 +197,8 @@ class OpenAICompatLLM(SteeringLLM):
         return speaker, content.strip()
 
     def _fallback_speaker(self, prompt: str) -> str:
-        speaker = self._speakers_from_prompt(prompt)[self._fallback_i % 2]
+        speakers = self._speakers_from_prompt(prompt)
+        speaker = speakers[self._fallback_i % len(speakers)]
         self._fallback_i += 1
         return speaker
 
