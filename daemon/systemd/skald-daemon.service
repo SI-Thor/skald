@@ -1,0 +1,14 @@
+[Unit]
+Description=skald voice daemon (OpenAI-compatible bridge over Riva)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=caseydigennaro
+WorkingDirectory=/home/caseydigennaro/src/skald/daemon/server
+ExecStart=/home/caseydigennaro/src/skald/daemon/server/.venv/bin/uvicorn app:app --host 0.0.0.0 --port 8000
+Restart=unless-stopped
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -43,6 +43,23 @@ of knowledge are seeds for exploration later. See ADR-0007 for the methodology.
 - **One daemon, many clients**: anything that can make an HTTP request can ask the Thor
   to speak. The extension is just the primary client.
 
+
+## Feature documentation (what's novel here)
+
+See **[docs/features/index.md](docs/features/index.md)** — supplemental docs
+for each novel feature: the produced live show (producer-in-the-loop with a
+said-aloud memory), hot-prefix steering economics, characters as versioned
+files with voice-slot indirection, the ASR round-trip acceptance gate, and
+power-context benchmarking.
+
+## Operations runbooks
+
+- Voice daemon service: `daemon/systemd/`
+- Riva deployment toolkit + repair chain: `daemon/riva-deploy/` (+ `repair/`)
+- Magpie TTS NIM on Thor (experiment): `daemon/riva-nim/`
+- Extension browser acceptance: `extension/SMOKETEST.md`
+- Benchmark harness: `benchmark/README.md`
+
 ## Repository map
 
 | Path | Purpose |
