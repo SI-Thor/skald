@@ -16,6 +16,10 @@ user's habits, and grows into a shared voice service the whole machine (and LAN)
 guide for using skald's voice stack from the last-mile distributed-sim
 project (what's reusable today, what to add, topology advice, honest gaps).
 
+**[docs/adapting/thor-tech-for-last-mile.md](docs/adapting/thor-tech-for-last-mile.md)** —
+Thor-hosted technologies that enhance the last-mile ProArt (decision bus,
+ARM64 NIMs, pre-render bank, PTP clock).
+
 ## Agents start here
 
 **[AGENTS.md](AGENTS.md)** — onboarding for AI agents (and the fastest human
