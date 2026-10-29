@@ -12,7 +12,7 @@ all stateful data in named volumes. Companion doc:
 | **NATS JetStream** | `skald-nats` (nats:2-alpine) | 4222 client / 8222 monitor | decision bus: `DECISIONS` stream on `score.>` — replay = never-wait + late joiners | publish→replay demo: 5/5 replayed in order |
 | **Qdrant** | `skald-qdrant` | 6333 HTTP / 6334 gRPC | vector canon store (collection `canon`, 1024-dim) | upsert + semantic search demo |
 | **Embedding NIM** | `skald-embed` (nv-embedqa-e5-v5) | 19001 | 1024-dim GPU embeddings (`/v1/embeddings`, OpenAI-shaped) | READY + RAG demo: query → correct canon hit |
-| **Ollama reflex LLM** | host `ollama` service | 11434 (OpenAI-shaped `/v1`) | reflex-tier steering (`llama3.2:3b` pulled; verified `SKALD-LLM-OK`) | live — steers Lane C repl |
+| **Ollama steering LLMs** | host `ollama` service | 11434 (OpenAI-shaped `/v1`) | two tiers: `llama3.2:3b` (fast, 2 GB) and `qwen3-coder` (Qwen3-Coder-30B-A3B Q4 from local NVMe GGUF — warm steering 1.6–1.8 s, in-character quality) | live — steers Lane C repl |
 | ~~LLM NIM~~ | `skald-llm` (llama-3.1-nemotron-nano-8b-v1) | 19002 | **BLOCKED**: image's TRT-LLM 0.17.1 has no sm_110 (Thor) fused-attention path — crashes at engine build (`fmhaRunner.cpp:85 Unsupported architecture`). Container stopped; recheck when a Thor-compatible NIM ships | pull-only |
 | skald-daemon | systemd `skald-daemon` | 8000 | `/v1/audio/speech` + **`/v1/audio/speech/stream`** (raw PCM chunks — play while synthesizing) | smoke + stream verified |
 
@@ -45,7 +45,7 @@ curl localhost:19001/v1/embeddings -H 'Content-Type: application/json' \
 curl localhost:11434/v1/chat/completions -H 'Content-Type: application/json' \
   -d '{"model":"llama3.2:3b","messages":[{"role":"user","content":"hi"}]}'
 ```
-Lane C uses it via `LANE_C_LLM_BASE_URL=http://localhost:11434/v1 LANE_C_LLM_MODEL=llama3.2:3b`.
+Lane C uses it via `LANE_C_LLM_BASE_URL=http://localhost:11434/v1 LANE_C_LLM_MODEL=qwen3-coder` (quality) or `llama3.2:3b` (fast). First qwen3-coder call pays an ~18 GB warm-load (~3 min); warm turns run 1.6–1.8 s.
 
 ### Utterance bank (pre-render ahead)
 
