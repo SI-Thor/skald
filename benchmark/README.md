@@ -140,21 +140,17 @@ On non-Jetson hosts every probe degrades to an explicit `unavailable`
 marker (e.g. `nvpmodel unavailable (non-Jetson host?)`) so the harness and
 the mock path run anywhere; results then just carry less context.
 
-## What's unverified
+## Verification status
 
-- **`RivaEngine` call shapes.** No live Riva server exists on this box yet,
-  so none of the gRPC calls have been executed. Written against the
-  documented Riva 2.x `nvidia-riva-client` API; the specific assumptions,
-  each marked `UNVERIFIED` in `benchmark/engines.py`:
-  `riva.client.Auth(uri=..., use_ssl=...)`, `riva.client.SpeechSynthesisService(auth)`,
-  and `synthesize_online(text=..., voice_name=..., language_code=...,
-  sample_rate_hz=...)` yielding responses with `.audio` raw-PCM chunks
-  (16-bit mono at the requested rate). First contact with a real server is
-  a smoke test: fix kwargs there if they differ, then benchmark.
-- **GPU/EMC utilization** from tegrastats on JetPack 7 / Thor (see above).
-- Riva probe-WAV validity depends on the PCM-format assumption above; mock
-  WAVs are verified (16 kHz mono 16-bit, sane durations).
+- **`RivaEngine` call shapes — VERIFIED live (2026-10-29).** All four
+  phases pass against the production Riva server; the documented gRPC
+  shapes worked first-try (the `UNVERIFIED` markers in `engines.py` are
+  historical). Request-side chunking was added for the server's caps
+  (2000 chars/request, 400 tokens/sentence).
+- **Still unverified:** GPU/EMC utilization from tegrastats on JetPack 7 /
+  Thor (platform doesn't report it — recorded as such, see above).
 
-Verified working on this host (2026-10-28): mock demo run + probe WAVs +
+Verified working on this host (2026-10-28/29): mock demo run + probe WAVs +
 scorecard render + `python3 -m benchmark` entry + riva-without-dependency
-error path + report-on-empty error path.
+error path + report-on-empty error path + live-Riva 4-phase run (Mia) +
+second independent live run by a cold-eyes agent.
