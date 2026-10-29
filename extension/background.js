@@ -87,7 +87,12 @@ function arrayBufferToBase64(buffer) {
 api.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.type !== 'skald:daemon-fetch') return undefined;
   const run = (async () => {
-    const url = DAEMON_BASE + String(msg.path || '/');
+    // Server URL: prefer the caller's configured base (engine reads settings);
+    // validate scheme — this is what makes LAN harnessing possible while
+    // never allowing file:, etc. through the proxy.
+    let base = String(msg.baseUrl || DAEMON_BASE);
+    if (!/^https?:\/\//i.test(base)) base = DAEMON_BASE;
+    const url = base.replace(/\/+$/, '') + String(msg.path || '/');
     const init = {
       method: msg.method || 'GET',
       headers: msg.headers || {},

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>skald — settings</title>
+  <style>
+    body { font: 14px system-ui, sans-serif; max-width: 560px; margin: 2rem auto; color: #e8e6e3; background: #14161a; }
+    h1 { font-size: 18px; } code { color: #f5a623; }
+    label { display: block; margin: 1rem 0 .3rem; }
+    input { width: 100%; padding: .5rem; border-radius: 6px; border: 1px solid #333;
+            background: #1e2126; color: #e8e6e3; font: 13px ui-monospace, monospace; }
+    button { margin-top: .8rem; padding: .5rem .9rem; border-radius: 6px; border: 0;
+             background: #f5a623; color: #14161a; font-weight: 600; cursor: pointer; }
+    button.secondary { background: #2b2f36; color: #e8e6e3; }
+    #status { margin-top: .8rem; min-height: 1.4em; }
+    .hint { color: #9a9691; font-size: 12.5px; }
+  </style>
+</head>
+<body>
+  <h1>skald daemon server</h1>
+  <p class="hint">Any skald daemon on your LAN works — on the Thor itself leave the
+    default; from another machine use the Thor's address, e.g. <code>http://192.168.0.78:8000</code>.</p>
+  <label for="serverUrl">Server URL</label>
+  <input id="serverUrl" placeholder="http://localhost:8000">
+  <button id="save">Save</button>
+  <button id="test" class="secondary">Test connection</button>
+  <button id="grant" class="secondary">Grant permission for this URL</button>
+  <div id="status"></div>
+  <p class="hint">Granting permission is needed once per non-localhost server
+    (browser rules); localhost works without it.</p>
+  <script src="options.js"></script>
+</body>
+</html>

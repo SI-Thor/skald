@@ -33,8 +33,8 @@ echo "    image     : $RIVA_IMAGE"
 echo "    rmir      : $RMIR"
 echo "    model repo: $MODEL_REPO_DIR (mounted at /data/models in container)"
 
-# Container-side paths
-C_RMIR="/work/$(basename "$RMIR")"
+# Container-side paths (exported so docker -e passes it through)
+export C_RMIR="/work/$(basename "$RMIR")"
 
 echo "==> [2/3] riva-deploy (force) into /data/models"
 "$DOCKER" run --rm --runtime nvidia --gpus all \

@@ -10,6 +10,12 @@ running on an **NVIDIA Jetson AGX Thor** (Blackwell GPU, 128 GB unified memory, 
 It replaces the "Read Aloud" Firefox extension with something better suited to one
 user's habits, and grows into a shared voice service the whole machine (and LAN) can use.
 
+## Agents start here
+
+**[AGENTS.md](AGENTS.md)** — onboarding for AI agents (and the fastest human
+summary): what's live vs simulated vs parked, how to call the running
+system, repo conventions (tiles, verified claims), and skill recipes.
+
 ## Why this repo is public
 
 SI-Thor is an open-source organization. Our business is **technicians installing

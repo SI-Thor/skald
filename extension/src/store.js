@@ -15,6 +15,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   volume: 1.0, // 0 – 1
   pitch: 1.0, // 0.5 – 2.0
   barPos: null, // { x, y } in CSS px, or null for default top-right
+  serverUrl: 'http://localhost:8000', // skald daemon base URL (LAN harness:
+  // point at e.g. http://192.168.0.78:8000 from another machine's browser)
 });
 
 function storage() {

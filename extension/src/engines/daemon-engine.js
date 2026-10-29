@@ -15,6 +15,7 @@
 'use strict';
 
 import { Engine, clamp } from './engine.js';
+import { loadSettings } from "../store.js";
 
 export const DAEMON_BASE_URL = 'http://localhost:8000';
 export const DEFAULT_MODEL = 'kokoro'; // placeholder until the daemon registry exists
@@ -35,6 +36,14 @@ export class DaemonEngine extends Engine {
   }
 
   async init() {
+    // The daemon may live anywhere on the LAN (LAN harness requirement):
+    // the configured server URL in settings is the single source of truth.
+    try {
+      const settings = await loadSettings();
+      if (settings.serverUrl) this.baseUrl = String(settings.serverUrl).replace(/\/+$/, '');
+    } catch (err) {
+      console.warn('[skald] serverUrl load failed, using default:', err);
+    }
     this._probed = true;
     this._available = false;
     this._voices = [];
@@ -58,7 +67,7 @@ export class DaemonEngine extends Engine {
 
   async _request(path, method = 'GET', body = null) {
     const api = typeof browser !== 'undefined' ? browser : chrome;
-    const msg = { type: 'skald:daemon-fetch', path, method, headers: {} };
+    const msg = { type: 'skald:daemon-fetch', baseUrl: this.baseUrl, path, method, headers: {} };
     if (body != null) {
       msg.headers['content-type'] = 'application/json';
       msg.bodyText = JSON.stringify(body);
@@ -78,7 +87,7 @@ export class DaemonEngine extends Engine {
       if (!this._available) {
         handlers.onerror &&
           handlers.onerror(
-            new Error('skald daemon unreachable (localhost:8000) — switch engine or start the daemon')
+            new Error(`skald daemon unreachable (${this.baseUrl}) — check server URL in options, or switch engine`)
           );
         return;
       }
