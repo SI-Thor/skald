@@ -16,6 +16,12 @@ user's habits, and grows into a shared voice service the whole machine (and LAN)
 summary): what's live vs simulated vs parked, how to call the running
 system, repo conventions (tiles, verified claims), and skill recipes.
 
+## Agents start here
+
+**[ONBOARDING.md](ONBOARDING.md)** is the paste-into-a-fresh-session prompt
+for the next agent. **[AGENTS.md](AGENTS.md)** is the standing onboarding
+(how to call the live system, what's running vs simulated, conventions).
+
 ## Why this repo is public
 
 SI-Thor is an open-source organization. Our business is **technicians installing
