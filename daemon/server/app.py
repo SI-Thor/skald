@@ -46,6 +46,42 @@ async def health():
     }
 
 
+@app.post("/v1/audio/speech/stream")
+async def speech_stream(req: SpeechRequest):
+    """Streaming variant: proxies Riva's chunked-PCM endpoint so clients can
+    play while synthesizing (never-wait). Returns raw 16-bit PCM chunks
+    (22.05 kHz mono) — NOT WAV; wrap client-side if you need a container."""
+    if not req.input.strip():
+        raise HTTPException(400, "input must be non-empty")
+    voice = await voices.resolve_voice(req.voice)
+    lang = req.language_code or "en-US"
+
+    async def gen():
+        async with httpx.AsyncClient(timeout=None) as client:
+            async with client.stream(
+                "POST",
+                f"{config.RIVA_HTTP_URI}/v1/audio/synthesize_online",
+                data={
+                    "text": req.input,
+                    "language": lang,
+                    "voice": voice,
+                    "sample_rate_hz": str(req.sample_rate_hz),
+                    "encoding": "LINEAR_PCM",
+                },
+            ) as r:
+                if r.status_code != 200:
+                    raise HTTPException(r.status_code, f"upstream: {await r.aread()}")
+                async for chunk in r.aiter_bytes():
+                    if chunk:
+                        yield chunk
+
+    return StreamingResponse(
+        gen(),
+        media_type="audio/pcm;rate=22050",
+        headers={"X-Skald-Voice": voice, "Cache-Control": "no-store"},
+    )
+
+
 @app.get("/v1/voices")
 async def list_voices():
     return {"voices": await voices.get_voices(), "aliases": voices.ALIASES}
