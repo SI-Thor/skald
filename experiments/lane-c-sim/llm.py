@@ -65,6 +65,17 @@ def parse_speaker_text(raw: str) -> tuple[str, str] | None:
     speaker = speaker.strip()
     if not speaker or "\n" in speaker:
         return None
+
+    # Polish pass (2026-10-29 live-show warts):
+    # 1) strip a duplicated "[Speaker]" bracket prefix from the text
+    import re as _re
+    rest = _re.sub(rf"^\s*\[{_re.escape(speaker)}\]\s*", "", rest)
+    # 2) drop parenthetical stage directions — "( Jason can respond ... )"
+    #    is direction to other cast members, not dialogue
+    if rest.startswith("("):
+        close = rest.find(")")
+        if close != -1:
+            rest = rest[close + 1 :].lstrip()
     return speaker, rest.strip()
 
 
