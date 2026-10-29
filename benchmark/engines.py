@@ -173,19 +173,32 @@ class RivaEngine(Engine):
     def synthesize_stream(self, text: str) -> typing.Iterator[bytes]:
         if self._service is None:
             self._connect()
-        # UNVERIFIED: synthesize_online(text=..., voice_name=...,
-        # language_code=..., sample_rate_hz=...) yields responses whose
-        # .audio field carries raw PCM chunks (default Riva output format:
-        # 16-bit signed PCM, mono, at the requested rate — also assumed,
-        # verify on first server contact).
-        responses = self._service.synthesize_online(
-            text=text,
-            voice_name=self.voice,
-            language_code=self.language_code,
-            sample_rate_hz=self.sample_rate_hz,
-        )
-        for response in responses:
-            yield response.audio
+        # Chunk at sentence-ish boundaries under the server's max_input_length
+        # (2000 chars on our Magpie deployment; the preprocessor enforces it
+        # server-side and rejects whole-request overflows). This mirrors how
+        # Lane A clients must stream anyway.
+        chunks: list[str] = []
+        remaining = text
+        limit = 350  # ~400-token max_sequence_length on the server (chars≈tokens after IPA)
+        while remaining:
+            if len(remaining) <= limit:
+                chunks.append(remaining)
+                break
+            cut = max(remaining.rfind(". ", 0, limit), remaining.rfind(" ", 0, limit))
+            if cut < limit // 2:
+                cut = limit - 1
+            chunks.append(remaining[: cut + 1])
+            remaining = remaining[cut + 1 :]
+        for chunk in chunks:
+            responses = self._service.synthesize_online(
+                text=chunk,
+                voice_name=self.voice,
+                language_code=self.language_code,
+                sample_rate_hz=self.sample_rate_hz,
+            )
+            for response in responses:
+                if response.audio:
+                    yield response.audio
 
 
 ENGINE_NAMES = ("mock", "riva")

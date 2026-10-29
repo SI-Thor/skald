@@ -1,6 +1,11 @@
 # ADR 0005 — Engine strategy: pluggable multi-engine, selected by on-device benchmark
 
 - **Status:** Accepted (2026-10-28); benchmark outcome pending
+- **Update 2026-10-29:** first real row landed — **riva/magpie-357m** (HF
+  path, repaired deploy): cold TTFA 0.243 s, warm median 0.188 s, RTF ≈ 0.35
+  @ 120 W. Meets the Lane A sub-second budget with 5× margin, pre-tuning.
+  See `docs/research/2026-10-29a-magpie-speaks.md` and
+  `daemon/riva-deploy/repair/`.
 
 ## Context
 
