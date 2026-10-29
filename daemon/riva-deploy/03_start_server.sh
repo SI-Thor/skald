@@ -21,7 +21,7 @@ set -euo pipefail
 
 RIVA_IMAGE="${RIVA_IMAGE:-nvcr.io/nvidia/riva/riva-speech:2.26.0-l4t-aarch64}"
 BASE_DIR="${BASE_DIR:-/home/caseydigennaro/src/skald-riva}"
-MODEL_REPO_DIR="${MODEL_REPO_DIR:-$BASE_DIR/model-repo}"
+MODEL_REPO_DIR="${MODEL_REPO_DIR:-$BASE_DIR/model-repo-official}"  # official TRT-LLM prebuilt (default; the HF-repaired model-repo/ is the fallback tile)
 CONTAINER_NAME="${CONTAINER_NAME:-skald-riva}"
 SHM_SIZE="${SHM_SIZE:-8g}"
 PORT_GRPC="${PORT_GRPC:-50051}"   # Riva gRPC (riva_tts_client, talk.py)
