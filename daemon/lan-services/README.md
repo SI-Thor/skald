@@ -1,9 +1,14 @@
 # LAN services — deployed infrastructure for skald + last-mile
 
 Decision-bus, vector canon, and NIM services on the Thor (deployed &
-verified 2026-10-29). All boot-persistent (`--restart unless-stopped`),
-all stateful data in named volumes. Companion doc:
+verified 2026-10-29). Stateful data in named volumes. Companion doc:
 `docs/adapting/thor-tech-for-last-mile.md`.
+
+> **Boot policy (2026-10-29, trimmed):** these services are **DOWN on
+> boot** (restart policy `no`) — production runs only skald-riva +
+> skald-daemon (+ ollama idle). Start them with `ops/start-all.sh`, stop
+> with `ops/stop-all.sh`, verify any boot with `ops/reboot-verify.sh`.
+> State survives (volumes); start-up is seconds.
 
 ## Deployed & verified
 
