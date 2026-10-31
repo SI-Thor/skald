@@ -1,11 +1,46 @@
-# extension/ — the skald Firefox control surface
+# extension/ — the skald control surface (Chrome first, Firefox too)
 
-Status: **v0 skeleton implemented** (Phase 1). Spec: ADR-0004 (control surface),
-ADR-0002 / `docs/architecture.md` (daemon contract).
+Status: **v0.1 implemented + Chrome-first-class** (ADR-0011). Spec: ADR-0004
+(control surface), ADR-0002 / `docs/architecture.md` (daemon contract),
+ADR-0011 (Chrome MV3 + offscreen audio + streaming).
 
-Manifest V3 Firefox extension (classic event-page background, no service
-worker, no build step, vanilla ES modules, zero dependencies). Requires
-**Firefox 140+** (CSS Custom Highlight API for sentence highlighting).
+Manifest V3 for **Chrome and Firefox** from one source tree. Chrome runs it
+as a service-worker extension with an offscreen audio document (no build
+step beyond the per-browser manifest, vanilla ES modules, zero runtime
+dependencies). Chrome **116+** (offscreen + `getContexts`); Firefox **140+**
+(CSS Custom Highlight API for sentence highlighting).
+
+## Loading it — Chrome (the owner's browser, persistent install)
+
+1. On the Thor (or any checkout): `cd extension && ./build.sh` — this writes
+   `dist/chrome/` (and `dist/firefox/`). `dist/` is a build artifact,
+   git-ignored.
+2. Copy `extension/dist/chrome/` to the Windows machine, e.g. to
+   `C:\Users\casey\skald-extension` (scp/USB — however files get there).
+   Keep it in one place; Chrome remembers the folder.
+3. Chrome → `chrome://extensions` → toggle **Developer mode** (top right).
+4. **Load unpacked** → select the `skald-extension` folder you copied.
+   This install is *persistent*: it survives Chrome restarts and reboots.
+   ("Errors" must stay empty — if Chrome ever complains about
+   `background.scripts`, you loaded the source tree instead of `dist/chrome`.)
+5. Right-click the skald toolbar icon → **Options** → Server URL
+   `http://192.168.0.78:8000` → **Test connection** → **Grant permission**
+   (the LAN origin is `optional_host_permissions`; the grant makes the fetch
+   proxy legal without editing the manifest).
+6. Open any article, press **Alt+R**.
+
+Updating after a code change: `./build.sh`, re-copy the folder over the old
+one, then the ↻ (Reload) button on `chrome://extensions`.
+
+## Loading it — Firefox
+
+- **about:debugging**: open `about:debugging#/runtime/this-firefox` →
+  *Load Temporary Add-on…* → pick `extension/dist/firefox/manifest.json`.
+  Temporary installs reset on browser restart.
+- **web-ext**: `npx web-ext run --source-dir extension/dist/firefox/`
+  (launches a clean Firefox profile with the extension loaded).
+
+Then open any article, press Alt+R.
 
 ## What it does
 
@@ -14,16 +49,6 @@ extension extracts the page's main content (or your current text selection),
 segments it into sentences, and starts reading aloud with a floating,
 draggable mini-player bar — current sentence highlighted and scrolled into
 view. No reader mode, no telemetry: the page is read as-is.
-
-## Loading it
-
-- **about:debugging**: open `about:debugging#/runtime/this-firefox` →
-  *Load Temporary Add-on…* → pick `extension/manifest.json`. Temporary
-  installs reset on browser restart.
-- **web-ext**: `npx web-ext run --source-dir extension/` (launches a clean
-  Firefox profile with the extension loaded).
-
-Then open any article, press Alt+R.
 
 ## What works (implemented)
 
@@ -50,16 +75,32 @@ Then open any article, press Alt+R.
 - **Engines** (`src/engines/`): `speak(text, opts, { onboundary, onend,
   onerror })` interface. System engine = `speechSynthesis` (with
   voiceschanged wait, utterance GC workaround, pause/resume). Daemon engine
-  probes `GET /v1/voices` at `http://localhost:8000`, marks itself
-  unavailable on failure (greyed "unreachable" in the dropdown, silent
-  fallback to system voices), `POST /v1/audio/speech` audio played via
-  data-URL `<audio>` with client-side `playbackRate` + `preservesPitch`.
+  probes `GET /v1/voices` at the configured server URL (default
+  `http://localhost:8000`), marks itself unavailable on failure (greyed
+  "unreachable" in the dropdown, silent fallback to system voices). Three
+  playback strategies (ADR-0011): **cache hit** (prefetched/replayed
+  sentence — starts instantly), **stream** (Chrome, rate 1×: the daemon's
+  `/v1/audio/speech/stream` chunked-PCM through the offscreen player, audio
+  starts with the first chunk instead of after the whole sentence), and
+  **whole WAV** (`POST /v1/audio/speech`, data-URL `<audio>` with client-side
+  `playbackRate` + `preservesPitch` — always the path on Firefox, and the
+  fallback when a stream fails). Whole-WAV results land in a 16-entry LRU
+  cache; `main.js` prefetches 2 sentences ahead. A voice the engine refuses
+  (Riva 400) is blacklisted for the session; the sentence retries with the
+  last working voice and the bar shows why. Voices parse from the daemon's
+  Riva shape (`voice_id` + speaker/style → "Mia · Calm").
 - **Persistence** (`src/store.js`): engine, per-engine voice, rate, volume,
   pitch, bar position in `browser.storage.local`.
 - **Background** (`background.js`): Alt+R command + toolbar click →
   `insertCSS` (highlight styles) + `executeScript` (bootstrap); CORS-free
   fetch proxy for all daemon traffic; `skald:open-lane` → opens
-  `lane.html` in a tab (content scripts cannot call `tabs.create`).
+  `lane.html` in a tab (content scripts cannot call `tabs.create`). On
+  Chrome this is a service worker: no state lives only in globals (it moves
+  to `storage.session`), listeners register synchronously, and audio is
+  brokered to the **offscreen document** (`offscreen.html`/`offscreen.js`)
+  which plays both blobs and streams; lifecycle events route back to the
+  originating tab. Firefox keeps the classic event page + inline
+  content-script audio.
 
 ## Lane C — the live show (experimental)
 
@@ -125,14 +166,8 @@ an ordinary extension page, not a web-accessible resource.
 
 - **Detach to window** — disabled stub button in row 3 (ADR-0004 behavior,
   needs a separate control window host; deferred).
-- **Detached window** — stub (planned); the engine assumes an
-  OpenAI-compatible `GET /v1/voices` + `POST /v1/audio/speech` (JSON
-  `{ model, input, voice, response_format, pitch }`, audio bytes returned).
-  It tolerates several voices-payload shapes and falls back cleanly when the
-  daemon is down.
 - **Word-level highlighting** — engine `onboundary` is wired through the
   interface but only sentence-level highlighting is rendered in v0.
-- **Prefetch** (2–3 sentences ahead, per architecture.md) — not implemented.
 - **Paragraph skip granularity, profile presets** — open details in
   ADR-0004, untouched.
 - **Cloud engine** — dropdown lists System voices / skald daemon only.
@@ -152,6 +187,13 @@ an ordinary extension page, not a web-accessible resource.
 5. **⏹ and ✕ both stop playback and close the bar** — no distinct
    "stop-but-keep-bar" state in v0.
 6. **Detach to window** is a disabled stub (see above).
+7. **The stream path scales pitch with speed**, so streaming is only used at
+   rate 1×; any other speed takes the whole-WAV `<audio>` path where
+   `preservesPitch` holds (ADR-0011). A failed stream retries the sentence
+   once as a whole WAV.
+8. **Installs use per-browser dist builds** (`build.sh` → `dist/chrome`,
+   `dist/firefox`); the source `manifest.json` carries both browsers' keys
+   and is not itself loadable in Chrome (ADR-0011).
 
 Additional note: the daemon's *synthesis-time speed hint* (ADR/architecture)
 is intentionally not sent in v0 — speed is purely client-side
@@ -167,12 +209,20 @@ manifest error rather than an ignorable extra property, remove it from
 ## Layout
 
 ```
-manifest.json            MV3, permissions: activeTab/storage/scripting,
-                         host_permissions: localhost:8000, Alt+R command,
-                         web_accessible_resources for src/*, min Firefox 140
-background.js            injection + daemon fetch proxy + lane-page opener
+manifest.json            SOURCE manifest — the canonical both-browsers
+                         statement (background.scripts AND service_worker);
+                         not itself loadable in Chrome. build.sh splits it.
+build.sh                 per-browser dist builds: dist/chrome (service
+                         worker, offscreen, min Chrome 116) + dist/firefox
+                         (event page, gecko id, FF 140+) — installs point here
+background.js            injection + daemon fetch proxy + lane-page opener;
+                         service-worker-safe (storage.session state) and
+                         offscreen audio broker on Chrome
+offscreen.html/js        Chrome's audio player (ADR-0011): blob + stream
+                         modes, lifecycle events routed back to the tab
 content/loader.js        classic bootstrap → dynamic import of src/main.js
-src/main.js              wiring: extract → segment → play → highlight → bar
+src/main.js              wiring: extract → segment → play → highlight → bar,
+                         2-sentence prefetch, engine-notice handling
                          (+ 'skald:get-article' answer for Lane C)
 lane.html                Lane C live-show page (ADR-0009 layer 3, opened in a tab)
 lane.js                  pure show-state logic (node-testable) + page wiring:
@@ -184,11 +234,15 @@ src/player.js            sentence cursor, live params, debounced restart
 src/store.js             browser.storage.local settings
 src/engines/engine.js    engine interface + helpers
 src/engines/system-engine.js   speechSynthesis engine
-src/engines/daemon-engine.js   localhost:8000 OpenAI-compatible engine
-src/control-bar/bar.js   shadow-DOM control bar (ADR-0004 layout)
+src/engines/daemon-engine.js   daemon engine: cache/prefetch/stream/whole-WAV
+                         strategies + voice-refusal recovery
+src/control-bar/bar.js   shadow-DOM control bar (ADR-0004 layout) + notices
 src/control-bar/bar.css  bar styles (dark, compact)
 src/control-bar/sliders.js    slider factory with live readouts
 src/highlight.css        ::highlight(skald-sentence) styles
+test/daemon-engine.test.mjs   browserless choreography tests (node --test)
+test/daemon-contract.mjs      live daemon contract check (voices/rate values)
+validate.sh              syntax + dist manifest rules + tests (+ live contract)
 icons/icon.svg           vector source
 icons/generate.js        dependency-free PNG encoder (zlib) — node icons/generate.js
 icons/icon-{16,32,48,96}.png  generated
@@ -196,14 +250,20 @@ icons/icon-{16,32,48,96}.png  generated
 
 ## Verification (what was checked without a browser)
 
-- `node --check` passes on every JS file (ES modules checked via temporary
-  `.mjs` copies).
+- `./validate.sh` — the standing gate: `node --check` every JS file, both
+  dist manifests against each browser's rules (incl. the Chrome
+  `background.scripts` error as a named check), `node --test` suite, and the
+  live daemon contract check when a daemon answers.
+- `node --test test/daemon-engine.test.mjs` — the engine's message
+  choreography: stream-first on Chrome, rate≠1 → blob, stream-failure
+  fallback, voice-refusal recovery (refused once → last working voice),
+  prefetch dedupe + cache hits, stale-event guards, Firefox inline path,
+  and the voices-payload shape regression (the empty-dropdown bug).
+- `node test/daemon-contract.mjs [base-url]` — the extension's voice/rate
+  values against the live daemon: /v1/voices parses, sampled ids (first /
+  last / styled) synthesize 200 with the exact body the engine builds,
+  omitted voice 200s, literal "default" 400s with the reason in the body.
 - `node icons/generate.js` regenerates valid PNGs (verified with `file`).
-- Ad-hoc node smoke tests exercised `segmenter.js` (abbreviations, initials,
-  ellipsis, closers, paragraph boundaries, list markers, run-on splitting,
-  offset integrity) and `player.js` with a fake engine (auto-advance,
-  pause/resume, prev/next, debounced param restart, engine swap, stale
-  callback guards, error surfacing). Both passed; scripts were deleted after.
 
 Not checkable without a browser: content-script dynamic import of
 `src/main.js`, shadow-DOM bar rendering/drag, Custom Highlight rendering,
