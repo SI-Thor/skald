@@ -458,18 +458,45 @@ export class DaemonEngine extends Engine {
 }
 
 /** Tolerant mapping of a /v1/voices payload into the engine voice shape. */
+/**
+ * Map a /v1/voices payload to the engine's voice shape.
+ * The skald daemon sends Riva-parsed entries:
+ *   { voice_id: "Magpie-Multilingual.EN-US.Mia.Calm", locale: "EN-US",
+ *     speaker: "Mia", style: "Calm", source: "riva" }
+ * OpenAI-ish servers send { id, name }. We accept both, build a human name
+ * from speaker/style when only the daemon shape is present, and dedupe.
+ * (Before 2026-10-30 this only looked at id/voice/name — the daemon's
+ * voice_id key was missed, the dropdown came up EMPTY, and speak() fell
+ * back to a literal voice "default" that Riva rejects with 400.)
+ */
 export function normalizeVoices(payload) {
   let list = null;
   if (Array.isArray(payload)) list = payload;
   else if (payload && Array.isArray(payload.voices)) list = payload.voices;
   else if (payload && Array.isArray(payload.data)) list = payload.data;
   if (!list) return [];
-  return list
-    .map((v) => ({
-      id: String(v.id != null ? v.id : v.voice != null ? v.voice : v.name != null ? v.name : ''),
-      name: String(v.name != null ? v.name : v.id != null ? v.id : v.voice != null ? v.voice : ''),
-      lang: v.language || v.lang || null,
-      tier: v.tier || null,
-    }))
-    .filter((v) => v.id);
+  const out = [];
+  const seen = new Set();
+  for (const v of list) {
+    const id = String(
+      v.id != null ? v.id :
+      v.voice_id != null ? v.voice_id :
+      v.voice != null ? v.voice :
+      v.name != null ? v.name : ''
+    );
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    let name = v.name != null ? String(v.name) : '';
+    if (!name && v.speaker != null) {
+      const style = v.style != null && v.style !== 'Default' ? ` · ${v.style}` : '';
+      name = `${v.speaker}${style}`;
+    }
+    out.push({
+      id,
+      name: name || id,
+      lang: v.language || v.lang || v.locale || null,
+      tier: v.tier || v.locale || null,
+    });
+  }
+  return out;
 }

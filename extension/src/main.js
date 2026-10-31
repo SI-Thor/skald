@@ -223,6 +223,15 @@ class App {
       index: state.index + 1,
       total: state.total,
       error: state.error,
+      // Voice/speed/volume/pitch render from the PLAYER's opts — the single
+      // source of truth. These keys were never sent before, so every
+      // playback state change reset the bar's sliders and selects to stale
+      // internal values: the speed readout snapping back to "1.0x" and the
+      // voice box showing the old voice (owner reports, 2026-10-30).
+      rate: state.opts && state.opts.rate,
+      volume: state.opts && state.opts.volume,
+      pitch: state.opts && state.opts.pitch,
+      voiceId: state.opts && state.opts.voiceId,
     });
   }
 

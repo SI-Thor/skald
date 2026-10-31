@@ -418,11 +418,15 @@ export class ControlBar {
     } else {
       this._engineSelect.value = s.engineId || 'system';
     }
-    if ('voices' in patch || 'voiceId' in patch) {
+    if ('voices' in patch) {
       this._rebuildVoiceOptions();
-    } else if (s.voices.length && s.voiceId != null) {
-      const has = s.voices.some((v) => v.id === s.voiceId);
-      this._voiceSelect.value = has ? s.voiceId : this._voiceSelect.value;
+    } else if ('voiceId' in patch && s.voices.length) {
+      // Render the voice box from state (the player's opts are the single
+      // source of truth). Rebuilding all ~400 options on every sentence
+      // advance would flicker — only the list changing rebuilds.
+      if (s.voiceId != null && s.voices.some((v) => v.id === s.voiceId)) {
+        this._voiceSelect.value = s.voiceId;
+      }
     }
 
     if (s.error) this.barEl.title = `skald: ${s.error}`;

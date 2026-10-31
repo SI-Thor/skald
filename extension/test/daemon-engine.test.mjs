@@ -88,14 +88,16 @@ async function withEngine(fn, { offscreen = true } = {}) {
   const engine = new DaemonEngine();
   rt.daemonRespond = (msg) => {
     if (msg.path === '/v1/voices') {
+      // The daemon's real shape: Riva-parsed entries keyed by voice_id
+      // (missing this key once emptied the dropdown — see normalizeVoices).
       return {
         ok: true,
         status: 200,
         contentType: 'application/json',
         bodyText: JSON.stringify({
           voices: [
-            { id: 'V-Mia', name: 'Mia' },
-            { id: 'V-Jason', name: 'Jason' },
+            { voice_id: 'V-Mia', locale: 'EN-US', speaker: 'Mia', style: 'Default', source: 'riva' },
+            { voice_id: 'V-Jason', locale: 'EN-US', speaker: 'Jason', style: 'Default', source: 'riva' },
           ],
         }),
       };
@@ -103,6 +105,12 @@ async function withEngine(fn, { offscreen = true } = {}) {
     return rt.speechRespond ? rt.speechRespond(msg) : { ok: false, status: 0, error: 'no speech stub' };
   };
   await engine.init();
+  assert.equal(engine._offscreenCapable, offscreen, 'capability probed from the background');
+  assert.deepEqual(
+    (await engine.listVoices()).map((v) => v.name),
+    ['Mia', 'Jason'],
+    'daemon voice_id shape parses to friendly speaker names'
+  );
   try {
     await fn(engine, rt);
   } finally {
@@ -241,3 +249,50 @@ test('Firefox-like environment (no offscreen capability) plays inline through Au
     { offscreen: false }
   );
 });
+
+// --- normalizeVoices (the payload-shape regression) -------------------------------
+
+test('normalizeVoices parses the daemon\'s voice_id shape into friendly names', async () => {
+  const { normalizeVoices } = await import('../src/engines/daemon-engine.js');
+  const daemonPayload = {
+    voices: [
+      { voice_id: 'Magpie-Multilingual.EN-US.Mia', locale: 'EN-US', speaker: 'Mia', style: 'Default', source: 'riva' },
+      { voice_id: 'Magpie-Multilingual.EN-US.Mia.Calm', locale: 'EN-US', speaker: 'Mia', style: 'Calm', source: 'riva' },
+      { voice_id: 'Magpie-Multilingual.ES-ES.Luna', locale: 'ES-ES', speaker: 'Luna', style: 'Default', source: 'riva' },
+    ],
+    aliases: { mia: 'Magpie-Multilingual.EN-US.Mia' },
+  };
+  const voices = normalizeVoices(daemonPayload);
+  assert.equal(voices.length, 3, 'the live daemon returns 399 of these; all must parse');
+  assert.deepEqual(
+    voices.map((v) => v.id),
+    [
+      'Magpie-Multilingual.EN-US.Mia',
+      'Magpie-Multilingual.EN-US.Mia.Calm',
+      'Magpie-Multilingual.ES-ES.Luna',
+    ]
+  );
+  assert.deepEqual(
+    voices.map((v) => v.name),
+    ['Mia', 'Mia · Calm', 'Luna'],
+    'speaker + non-default style make the human label'
+  );
+  assert.equal(voices[0].tier, 'EN-US');
+});
+
+test('normalizeVoices still accepts OpenAI-ish {id,name} and dedupes', async () => {
+  const { normalizeVoices } = await import('../src/engines/daemon-engine.js');
+  const voices = normalizeVoices({ data: [{ id: 'a', name: 'Alpha' }, { id: 'a', name: 'Alpha' }, { id: 'b' }] });
+  assert.deepEqual(voices, [
+    { id: 'a', name: 'Alpha', lang: null, tier: null },
+    { id: 'b', name: 'b', lang: null, tier: null },
+  ]);
+});
+
+test('normalizeVoices on garbage returns an empty list, never throws', async () => {
+  const { normalizeVoices } = await import('../src/engines/daemon-engine.js');
+  assert.deepEqual(normalizeVoices(null), []);
+  assert.deepEqual(normalizeVoices({ voices: 7 }), []);
+  assert.deepEqual(normalizeVoices({ voices: [{ nope: 1 }] }), []);
+});
+
