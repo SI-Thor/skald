@@ -43,6 +43,8 @@ const FALLBACK_CSS = [
   '.skald-bar[data-expanded="1"] .skald-row-engine{display:flex;}',
   '.skald-bar[data-expanded="2"] .skald-row-engine,',
   '.skald-bar[data-expanded="2"] .skald-row-tuning{display:flex;}',
+  '.skald-notice{display:flex;padding:4px 10px;font-size:11px;color:#f2c98a;',
+  'background:#2a2435;border-top:1px solid #39415a;border-radius:0 0 10px 10px;}',
   '.skald-btn{width:26px;height:26px;border:none;background:transparent;',
   'color:#e8ebf2;cursor:pointer;font-size:13px;}',
   'select{background:#242b3f;color:#e8ebf2;}',
@@ -433,7 +435,30 @@ export class ControlBar {
     else this.barEl.removeAttribute('title');
   }
 
+  /**
+   * Transient in-bar message (engine notices: "voice refused — using Mia").
+   * Appears as a strip under the rows and auto-hides; error state it is not —
+   * playback continues.
+   */
+  notify(text) {
+    if (!this.host.isConnected) return;
+    if (!this._noticeEl || !this._noticeEl.isConnected) {
+      this._noticeEl = document.createElement('div');
+      this._noticeEl.className = 'skald-notice';
+      this.barEl.appendChild(this._noticeEl);
+    }
+    this._noticeEl.textContent = text;
+    this._noticeEl.title = text;
+    if (this._noticeTimer != null) clearTimeout(this._noticeTimer);
+    this._noticeTimer = setTimeout(() => {
+      if (this._noticeEl && this._noticeEl.isConnected) this._noticeEl.remove();
+      this._noticeEl = null;
+      this._noticeTimer = null;
+    }, 6000);
+  }
+
   remove() {
+    if (this._noticeTimer != null) clearTimeout(this._noticeTimer);
     if (this.host.parentNode) this.host.parentNode.removeChild(this.host);
   }
 }

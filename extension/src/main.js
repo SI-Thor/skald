@@ -110,6 +110,9 @@ class App {
       daemon: new DaemonEngine(),
     };
     await this.engines.system.init(); // cheap; always succeeds
+    // A refused voice recovers in the engine; the bar has to show it and the
+    // UI's voiceId has to follow the substitute (owner bug 3, 2026-10-30).
+    this.engines.daemon.onNotice = (n) => this._onDaemonNotice(n);
 
     this.bar = new ControlBar({
       position: this.settings.barPos,
@@ -213,6 +216,21 @@ class App {
         }
       }
     }
+  }
+
+  _onDaemonNotice(n) {
+    if (this.closed || !n) return;
+    if (n.kind !== 'voice-refused') return;
+    const engine = this.engines.daemon;
+    const from = engine ? engine.voiceLabel(n.voice) : String(n.voice);
+    const to = engine ? engine.voiceLabel(n.fallback) : String(n.fallback);
+    // Follow the substitute in the app + bar (render + player opts — the
+    // restart replays from the engine cache, so it is seamless). The refused
+    // voice is blacklisted inside the engine for this session.
+    this.voiceId = n.fallback;
+    this.player.setParams({ voiceId: n.fallback });
+    this.bar.setState({ voiceId: n.fallback });
+    this.bar.notify(`skald: voice "${from}" was refused by the engine — using ${to}.`);
   }
 
   _syncState(state) {

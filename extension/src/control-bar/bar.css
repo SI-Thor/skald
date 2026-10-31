@@ -141,3 +141,16 @@
 .skald-saved-flash {
   color: #7dd6a0;
 }
+
+.skald-notice {
+  display: flex;
+  align-items: center;
+  padding: 4px 10px;
+  margin: 0 4px 4px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #f2c98a;
+  background: #2a2435;
+  border: 1px solid #4a3f2a;
+  border-radius: 6px;
+}

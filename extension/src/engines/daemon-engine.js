@@ -61,6 +61,9 @@ export class DaemonEngine extends Engine {
     this._playKind = null; // 'blob' | 'stream' — what the active play is
     this._active = null; // { text, voice, o, handlers, gen, streamRetried }
     this._offscreenCapable = false; // answered by the background (see above)
+    this._refused = new Set(); // voices the engine rejected this session
+    this._lastGoodVoice = null; // last voice the engine synthesized happily
+    this.onNotice = null; // optional: ({kind, ...}) => void — wired by main.js
     this._cache = new Map(); // key → { mime, bodyBase64 }
     this._pending = new Set(); // keys with a prefetch in flight
     this._onAudioEvent = (msg) => {
@@ -71,6 +74,7 @@ export class DaemonEngine extends Engine {
         this._paused = false;
         this._playId = null;
         this._playKind = null;
+        if (this._active && this._active.voice != null) this._lastGoodVoice = this._active.voice;
         this._handlers && this._handlers.onend && this._handlers.onend();
       } else if (msg.event === 'error') {
         const wasStream = this._playKind === 'stream';
@@ -90,7 +94,7 @@ export class DaemonEngine extends Engine {
             active.o,
             active.handlers,
             active.gen,
-            this._cacheKey(active.text, active.o)
+            this._cacheKey(active.text, active.o, active.voice)
           )
             .catch((err) => {
               active.handlers.onerror &&
@@ -173,14 +177,62 @@ export class DaemonEngine extends Engine {
 
   // --- synthesis cache / prefetch ------------------------------------------------
 
-  _cacheKey(text, o) {
-    return `${o.voiceId || 'default'}|${clamp(o.pitch, 0.5, 2, 1)}|${text}`;
+  _cacheKey(text, o, voice) {
+    const v = voice != null ? voice : o.voiceId != null ? o.voiceId : 'default';
+    return `${v}|${clamp(o.pitch, 0.5, 2, 1)}|${text}`;
   }
 
   _cacheStore(key, mime, bodyBase64) {
     if (this._cache.has(key)) this._cache.delete(key); // refresh LRU position
     this._cache.set(key, { mime, bodyBase64 });
     while (this._cache.size > CACHE_LIMIT) this._cache.delete(this._cache.keys().next().value);
+  }
+
+  /**
+   * The voice to actually send. Voices this engine rejected this session
+   * (Riva 400) are substituted with the last voice that worked; null means
+   * "omit the field" — the daemon then uses its default (Mia). A literal
+   * "default" is NEVER sent: Riva rejects it with 400 (the owner's 8x-400
+   * session, 2026-10-30 — the dropdown once parsed empty and this fallback
+   * produced exactly that body).
+   */
+  _resolveVoice(requested) {
+    let v = requested || (this._voices[0] && this._voices[0].id) || null;
+    if (v != null && this._refused.has(v)) {
+      v = this._lastGoodVoice != null && !this._refused.has(this._lastGoodVoice)
+        ? this._lastGoodVoice
+        : null;
+    }
+    return v;
+  }
+
+  /** Human label for notices/logs; never throws. */
+  voiceLabel(id) {
+    if (id == null) return 'the daemon default';
+    const v = this._voices.find((x) => x.id === id);
+    return (v && v.name) || id;
+  }
+
+  _notify(payload) {
+    try {
+      this.onNotice && this.onNotice(payload);
+    } catch {
+      /* notices are best-effort */
+    }
+  }
+
+  /** The daemon's rejection reason from a proxied response, if any. */
+  _rejectionDetail(res) {
+    if (res.bodyText) {
+      try {
+        const d = JSON.parse(res.bodyText);
+        if (d && d.detail) return String(d.detail).replace(/\s+/g, ' ').slice(0, 160);
+      } catch {
+        /* not json */
+      }
+      return res.bodyText.replace(/\s+/g, ' ').slice(0, 160);
+    }
+    return res.error ? String(res.error) : '';
   }
 
   /**
@@ -191,19 +243,21 @@ export class DaemonEngine extends Engine {
   prefetch(text, opts) {
     if (!this._available || !text) return;
     const o = opts || {};
-    const key = this._cacheKey(text, o);
+    const voice = this._resolveVoice(o.voiceId);
+    const key = this._cacheKey(text, o, voice);
     if (this._cache.has(key) || this._pending.has(key)) return;
     this._pending.add(key);
     const body = {
       model: o.model || DEFAULT_MODEL,
       input: text,
-      voice: o.voiceId || (this._voices[0] && this._voices[0].id) || 'default',
       response_format: 'wav',
       pitch: clamp(o.pitch, 0.5, 2, 1),
     };
+    if (voice != null) body.voice = voice;
     this._request('/v1/audio/speech', 'POST', body)
       .then((res) => {
         if (res.ok && res.bodyBase64) {
+          this._lastGoodVoice = voice != null ? voice : this._lastGoodVoice;
           this._cacheStore(key, (res.contentType || 'audio/wav').split(';')[0].trim() || 'audio/wav', res.bodyBase64);
         }
       })
@@ -226,9 +280,9 @@ export class DaemonEngine extends Engine {
       const gen = ++this._gen;
       this._handlers = handlers;
       const o = opts || {};
-      const voice = o.voiceId || (this._voices[0] && this._voices[0].id) || 'default';
+      const voice = this._resolveVoice(o.voiceId);
       const rate = clamp(o.rate, 0.25, 4, 1);
-      const key = this._cacheKey(text, o);
+      const key = this._cacheKey(text, o, voice);
       this._active = { text, voice, o, handlers, gen, streamRetried: false };
 
       const cached = this._cache.get(key);
@@ -256,8 +310,19 @@ export class DaemonEngine extends Engine {
     });
   }
 
-  /** Synthesize the whole WAV (or serve it from the cache) and play it. */
-  async _speakWhole(text, voice, o, handlers, gen, key) {
+  /**
+   * Synthesize the whole WAV (or serve it from the cache) and play it.
+   * A 400/422 that arrived with a named voice is treated as a voice
+   * refusal: the voice is blacklisted for the session, the bar is notified,
+   * and the sentence is retried ONCE with the substitute (or with the
+   * daemon's default voice) — a rejected request must recover, not go
+   * silent (owner report 2026-10-30: 8x400, then nothing).
+   */
+  async _speakWhole(text, voice, o, handlers, gen, key, voiceRetried = false) {
+    // Keep _active honest: the retry below speaks a DIFFERENT voice than
+    // speak() resolved, and the 'ended' handler promotes _active.voice to
+    // last-known-good — a stale value there would re-elect a refused voice.
+    if (this._active && this._active.gen === gen) this._active.voice = voice;
     const cached = key && this._cache.get(key);
     if (cached) {
       await this._startBlob(cached.mime, cached.bodyBase64, o, handlers, gen);
@@ -266,19 +331,35 @@ export class DaemonEngine extends Engine {
     const body = {
       model: o.model || DEFAULT_MODEL,
       input: text,
-      voice,
       response_format: 'wav',
       pitch: clamp(o.pitch, 0.5, 2, 1),
     };
+    if (voice != null) body.voice = voice;
     const res = await this._request('/v1/audio/speech', 'POST', body);
     if (gen !== this._gen) return; // superseded while synthesizing
     if (!res.ok || !res.bodyBase64) {
+      const detail = this._rejectionDetail(res);
+      if ((res.status === 400 || res.status === 422) && !voiceRetried) {
+        if (voice != null) this._refused.add(voice);
+        const fallback = this._resolveVoice(o.voiceId);
+        if (fallback !== voice) {
+          console.warn(
+            `[skald] voice ${voice} refused (HTTP ${res.status}${detail ? `: ${detail}` : ''}) — retrying with ${this.voiceLabel(fallback)}`
+          );
+          this._notify({ kind: 'voice-refused', voice, fallback, reason: detail });
+          return this._speakWhole(
+            text, fallback, o, handlers, gen,
+            this._cacheKey(text, o, fallback), true
+          );
+        }
+      }
       handlers.onerror &&
         handlers.onerror(
-          new Error(`daemon speech failed: HTTP ${res.status}${res.error ? ` (${res.error})` : ''}`)
+          new Error(`daemon speech failed: HTTP ${res.status}${detail ? ` — ${detail}` : ''}`)
         );
       return;
     }
+    if (voice != null) this._lastGoodVoice = voice;
     const mime = (res.contentType || 'audio/wav').split(';')[0].trim() || 'audio/wav';
     if (key) this._cacheStore(key, mime, res.bodyBase64);
     await this._startBlob(mime, res.bodyBase64, o, handlers, gen);
@@ -299,10 +380,12 @@ export class DaemonEngine extends Engine {
   }
 
   _startStream(text, voice, o, handlers, gen) {
+    const body = { model: o.model || DEFAULT_MODEL, input: text };
+    if (voice != null) body.voice = voice;
     return this._playOffscreen({
       mode: 'stream',
       url: `${this.baseUrl}/v1/audio/speech/stream`,
-      body: { model: o.model || DEFAULT_MODEL, input: text, voice },
+      body,
       volume: clamp(o.volume, 0, 1, 1),
       rate: 1,
     }, handlers, gen);

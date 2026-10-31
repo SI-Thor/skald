@@ -296,3 +296,108 @@ test('normalizeVoices on garbage returns an empty list, never throws', async () 
   assert.deepEqual(normalizeVoices({ voices: [{ nope: 1 }] }), []);
 });
 
+// --- voice-refusal recovery (owner bug 3: 8x400 then silence) ---------------------
+// In the Chrome-like environment a cold sentence at rate 1 goes STREAM first
+// (and Riva's streaming endpoint false-succeeds on a bad voice with 0 bytes),
+// so these tests replay the real sequence: stream fails -> whole-WAV 400 ->
+// the engine must recover with the last working voice, never go silent.
+
+test('a refused voice recovers: notice + retry with last working voice', async () => {
+  await withEngine(async (engine, rt) => {
+    const notices = [];
+    engine.onNotice = (n) => notices.push(n);
+    rt.speechRespond = (msg) =>
+      JSON.parse(msg.bodyText).voice === 'V-Mia'
+        ? { ok: true, status: 200, contentType: 'audio/wav', bodyBase64: WAV }
+        : { ok: false, status: 400, contentType: 'application/json', bodyText: JSON.stringify({ detail: 'upstream: Voice not found' }) };
+    // First sentence streams fine and completes -> establishes last-good.
+    engine.speak('First sentence.', opts(), { onend: () => {} });
+    await new Promise((r) => setTimeout(r, 10));
+    const first = rt.sent.find((m) => m.type === 'skald:audio-play');
+    rt.deliver({ type: 'skald:audio-event', playId: first.playId, event: 'ended' });
+    await new Promise((r) => setTimeout(r, 10));
+    assert.equal(engine._lastGoodVoice, 'V-Mia');
+
+    // User picks V-Jason: stream false-succeeds (0 bytes) -> error event ->
+    // whole-WAV fallback gets the 400 -> engine must recover.
+    let errored = false;
+    let ended = false;
+    engine.speak('Second sentence.', opts({ voiceId: 'V-Jason' }), {
+      onend: () => (ended = true),
+      onerror: () => (errored = true),
+    });
+    await new Promise((r) => setTimeout(r, 10));
+    const second = rt.sent.filter((m) => m.type === 'skald:audio-play').pop();
+    rt.deliver({ type: 'skald:audio-event', playId: second.playId, event: 'error', error: 'stream produced no audio' });
+    await new Promise((r) => setTimeout(r, 30));
+    const speechFetches = rt.sent.filter((m) => m.type === 'skald:daemon-fetch' && m.path === '/v1/audio/speech');
+    const voicesSent = speechFetches.map((m) => JSON.parse(m.bodyText).voice);
+    assert.deepEqual(voicesSent, ['V-Jason', 'V-Mia'], 'refused once, retried with the last good voice');
+    assert.equal(notices.length, 1);
+    assert.equal(notices[0].kind, 'voice-refused');
+    assert.equal(notices[0].voice, 'V-Jason');
+    assert.equal(notices[0].fallback, 'V-Mia');
+    const play = rt.sent.filter((m) => m.type === 'skald:audio-play').pop();
+    assert.equal(play.mode, 'blob');
+    assert.ok(!errored, 'no user-visible error: the sentence still speaks');
+    rt.deliver({ type: 'skald:audio-event', playId: play.playId, event: 'ended' });
+    await new Promise((r) => setTimeout(r, 10));
+    assert.ok(ended);
+
+    // The refused voice is not sent again this session.
+    rt.sent.length = 0;
+    engine.speak('Third sentence.', opts({ voiceId: 'V-Jason' }), { onend: () => {} });
+    await new Promise((r) => setTimeout(r, 20));
+    const third = rt.sent.find((m) => m.type === 'skald:daemon-fetch' && m.path === '/v1/audio/speech');
+    assert.equal(third, undefined, 'no 400 loop: V-Jason is never re-sent');
+    const streamPlay = rt.sent.find((m) => m.type === 'skald:audio-play');
+    assert.equal(streamPlay.body.voice, 'V-Mia', 'substitute voice used on the stream path');
+  });
+});
+
+test('a refusal with no known-good voice retries once with the daemon default (voice omitted)', async () => {
+  await withEngine(async (engine, rt) => {
+    const notices = [];
+    engine.onNotice = (n) => notices.push(n);
+    let calls = 0;
+    rt.speechRespond = () => {
+      calls++;
+      return calls === 1
+        ? { ok: false, status: 400, contentType: 'application/json', bodyText: JSON.stringify({ detail: 'upstream: bad voice' }) }
+        : { ok: true, status: 200, contentType: 'audio/wav', bodyBase64: WAV };
+    };
+    let errored = false;
+    engine.speak('Cold open refusal.', opts({ voiceId: 'V-Bad' }), { onerror: () => (errored = true) });
+    await new Promise((r) => setTimeout(r, 10));
+    const streamPlay = rt.sent.find((m) => m.type === 'skald:audio-play');
+    rt.deliver({ type: 'skald:audio-event', playId: streamPlay.playId, event: 'error', error: 'stream produced no audio' });
+    await new Promise((r) => setTimeout(r, 30));
+    const voicesSent = rt.sent
+      .filter((m) => m.type === 'skald:daemon-fetch' && m.path === '/v1/audio/speech')
+      .map((m) => JSON.parse(m.bodyText).voice);
+    assert.deepEqual(voicesSent, ['V-Bad', undefined], 'retry omits the voice (daemon default)');
+    assert.ok(!errored);
+    assert.equal(notices.length, 1);
+  });
+});
+
+test('the engine never sends the literal voice "default" (Riva rejects it with 400)', async () => {
+  await withEngine(async (engine, rt) => {
+    rt.speechRespond = () => ({ ok: true, status: 200, contentType: 'audio/wav', bodyBase64: WAV });
+    engine._voices = []; // worst case: dropdown parsed empty
+    // rate 1 -> stream body; rate 1.4 -> whole-WAV body. Neither may carry
+    // voice:"default" — omitting the field makes the daemon use its default.
+    engine.speak('No voices known.', { rate: 1, volume: 1, pitch: 1 }, { onend: () => {} });
+    engine.speak('No voices known either.', { rate: 1.4, volume: 1, pitch: 1 }, { onend: () => {} });
+    await new Promise((r) => setTimeout(r, 20));
+    for (const m of rt.sent) {
+      if (m.type === 'skald:audio-play' && m.body) {
+        assert.ok(m.body.voice === undefined || m.body.voice !== 'default', 'stream body: never "default"');
+      }
+      if (m.type === 'skald:daemon-fetch' && m.path === '/v1/audio/speech') {
+        const v = JSON.parse(m.bodyText).voice;
+        assert.ok(v === undefined || v !== 'default', 'speech body: never "default"');
+      }
+    }
+  });
+});
