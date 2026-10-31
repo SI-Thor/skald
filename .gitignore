@@ -33,3 +33,4 @@ workspace/
 *.swp
 .idea/
 .vscode/
+.venv-asr/
