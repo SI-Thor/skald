@@ -1,0 +1,12 @@
+[Unit]
+Description=Run the skald smoke check (ASR round-trip) every hour
+
+[Timer]
+OnCalendar=hourly
+# If the box was off/asleep at the scheduled minute, run it at next boot.
+Persistent=true
+# Not to-the-second: a 30 s spread keeps off the :00 pile-up with anything else.
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,22 @@
+[Unit]
+Description=skald hourly smoke check — health, synthesis, whisper ASR round-trip
+Documentation=file://%h/src/skald/docs/decisions/0012-hourly-asr-smoke-check.md
+# A failure here means skald is NOT speaking intelligibly (or is down) —
+# the journal line is the alert; nothing auto-restarts (by design, ADR-0012).
+
+[Service]
+Type=oneshot
+# Run the deployed tree's smoke script (the director deploys; this repo
+# only carries the install files). --require-asr: a missing whisper is a
+# FAIL, not a skip — a production check that silently degrades is not a check.
+ExecStart=%h/src/skald/.venv-asr/bin/python %h/src/skald/daemon/server/test_smoke.py --require-asr
+# smoke_out.wav lands in ~/.local/state/skald-smoke, never in the repo.
+StateDirectory=skald-smoke
+WorkingDirectory=%h/.local/state/skald-smoke
+# "whisper heard: ..." + SMOKE-ALL-OK land in the journal, greppable as:
+#   journalctl --user -t skald-smoke -n 50
+SyslogIdentifier=skald-smoke
+# Generous timeout: under GPU contention a one-sentence synthesis took
+# 10-22 s (docs/research/2026-10-30-lan-latency-under-load.md); whisper
+# loads on CPU. 5 minutes covers the worst observed case with margin.
+TimeoutStartSec=5min

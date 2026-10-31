@@ -87,8 +87,10 @@ curl -s http://localhost:8000/v1/audio/speech \
 ## Skill recipes (compose these; don't reinvent)
 
 - **"Make the machine say X"** → daemon `/v1/audio/speech` (above). For
-  streaming PCM use Riva `/v1/audio/synthesize_online` (chunked, no WAV
-  header — wrap or pipe raw).
+  streaming PCM use the daemon `/v1/audio/speech/stream` (OpenAI-shaped) or
+  Riva `/v1/audio/synthesize_online` (chunked, no WAV header — wrap or pipe
+  raw); under GPU contention the stream's first chunk is ~0.5 s vs ~11 s
+  for a whole WAV (docs/research/2026-10-30-lan-latency-under-load.md).
 - **"How fast is engine E?"** → `benchmark/`: `./benchmark/run --engine riva
   --voice <name>` (installs `nvidia-riva-client` into a venv first); report
   via `./benchmark/run report`. Intelligibility gate is mandatory for any
@@ -106,7 +108,7 @@ curl -s http://localhost:8000/v1/audio/speech \
 
 ## Fast pointers
 
-| Verify the system | `AGENTS.md` ground-truth commands; `daemon/server/test_smoke.py`; `./benchmark/run` |
+| Verify the system | `AGENTS.md` ground-truth commands; `daemon/server/test_smoke.py`; `./benchmark/run`; hourly install: `daemon/systemd/user/` (ADR-0012) |
 |---|---|
 | The plan | `docs/ROADMAP.md` |
 | Why any decision | `docs/decisions/0001…0010` |
