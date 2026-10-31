@@ -5,6 +5,7 @@ Lane A contract per docs/architecture.md. Speed is a client-side concern
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import asdict
 from typing import Literal
 
@@ -18,6 +19,20 @@ import show_api
 import voices
 
 app = FastAPI(title="skald daemon", version="0.1.0")
+
+log = logging.getLogger("skald.speech")
+
+
+def _log_upstream_reject(endpoint: str, status: int, body: str, *, voice: str, sample_rate_hz: int, chars: int) -> None:
+    """A 400/5xx from Riva says WHY in its body, but the client only sees the
+    status and the journal only sees the access line. Log the reason — the
+    upstream body plus what we asked for (voice, sample rate, text LENGTH —
+    never the text itself: page contents are the user's business, and the
+    journal is not where they belong)."""
+    log.warning(
+        "%s rejected by upstream: status=%s voice=%r sample_rate_hz=%s chars=%d reason=%s",
+        endpoint, status, voice, sample_rate_hz, chars, body[:200].strip(),
+    )
 
 
 class SpeechRequest(BaseModel):
@@ -74,7 +89,12 @@ async def speech_stream(req: SpeechRequest):
                 },
             ) as r:
                 if r.status_code != 200:
-                    raise HTTPException(r.status_code, f"upstream: {await r.aread()}")
+                    reason = (await r.aread()).decode(errors="replace")
+                    _log_upstream_reject(
+                        "/v1/audio/speech/stream", r.status_code, reason,
+                        voice=voice, sample_rate_hz=req.sample_rate_hz, chars=len(req.input),
+                    )
+                    raise HTTPException(r.status_code, f"upstream: {reason[:200]}")
                 async for chunk in r.aiter_bytes():
                     if chunk:
                         yield chunk
@@ -113,6 +133,10 @@ async def speech(req: SpeechRequest):
             },
         )
     if r.status_code != 200:
+        _log_upstream_reject(
+            "/v1/audio/speech", r.status_code, r.text,
+            voice=voice, sample_rate_hz=req.sample_rate_hz, chars=len(req.input),
+        )
         raise HTTPException(r.status_code, f"upstream: {r.text[:200]}")
     return Response(
         content=r.content,
