@@ -18,8 +18,10 @@
   "permissions": [
     "activeTab",
     "scripting",
-    "storage"
+    "storage",
+    "offscreen"
   ],
+  "minimum_chrome_version": "116",
   "host_permissions": [
     "http://localhost:8000/*",
     "http://localhost:50000/*"

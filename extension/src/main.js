@@ -120,7 +120,10 @@ class App {
       engine: this.engines.system,
       sentences: this.sentences,
       onChange: (state) => this._syncState(state),
-      onSentence: (i, s) => this._highlight(i, s),
+      onSentence: (i, s) => {
+        this._highlight(i, s);
+        this._prefetchAhead(i);
+      },
     });
 
     // Resolve the initial engine. If the saved engine is the daemon, wait
@@ -188,6 +191,30 @@ class App {
     this.bar.setState({ voices, voiceId });
   }
 
+  /**
+   * Keep the daemon engine's synthesis cache warm ~2 sentences ahead while
+   * reading (ADR-0011): under Thor load a synthesis takes seconds, so the
+   * only way the NEXT sentence starts instantly is if it was already
+   * synthesized during this one's playback. Riva serializes requests, so
+   * more lookahead would only queue behind itself.
+   */
+  _prefetchAhead(index) {
+    if (this.engineId !== 'daemon') return;
+    const engine = this.engines.daemon;
+    if (!engine || !engine.available || typeof engine.prefetch !== 'function') return;
+    const opts = { ...this.player.opts, voiceId: this.voiceId };
+    for (let j = index + 1; j <= index + 2 && j < this.sentences.length; j++) {
+      const s = this.sentences[j];
+      if (s && s.text) {
+        try {
+          engine.prefetch(s.text, opts);
+        } catch {
+          /* prefetch is best-effort by design */
+        }
+      }
+    }
+  }
+
   _syncState(state) {
     if (this.closed || !this.bar) return;
     this.bar.setState({
@@ -241,6 +268,9 @@ class App {
     if (this.closed) return;
     this.closed = true;
     this.player.dispose();
+    for (const engine of Object.values(this.engines)) {
+      if (engine && typeof engine.dispose === 'function') engine.dispose();
+    }
     this._clearHighlight();
     this.bar.remove();
     if (currentApp === this) currentApp = null;

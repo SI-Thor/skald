@@ -1,42 +1,74 @@
-// skald — background event page (classic, MV3 Firefox).
+// skald — background: event page (Firefox) / service worker (Chrome MV3).
 //
 // Responsibilities (kept deliberately thin):
 //   1. Alt+R command / toolbar click → inject the content-script bootstrap
 //      (content/loader.js) plus the sentence-highlight stylesheet.
 //   2. CORS-free proxy for daemon traffic: the content script cannot fetch
 //      http://localhost:8000 directly, so it sends 'skald:daemon-fetch'
-//      messages and this page performs the fetch using host_permissions.
+//      messages and this context performs the fetch using host_permissions.
 //   3. 'skald:open-lane' → open the Lane C live-show page (lane.html) in a
 //      tab: content scripts cannot call tabs.create (ADR-0009 layer 3).
+//   4. Audio brokering for Chrome (ADR-0011): Chrome kills this context
+//      after ~30 s idle and its service worker has no DOM, so daemon audio
+//      cannot live here. 'skald:audio-play' requests are forwarded to an
+//      offscreen document (extension page, exempt from the site autoplay
+//      policy) which fetches/plays; its 'skald:audio-event' replies are
+//      routed back to the originating tab. Firefox never uses this path —
+//      its event page keeps the classic inline playback in the content
+//      script.
+//
+// Service-worker rule: NO state lives only in globals — Chrome may kill and
+// respawn this script between any two events. Cross-event state
+// (CSS-injected tabs, playId→tabId audio routes) goes through
+// storage.session, with an in-memory fast path; storage.session is also
+// available in Firefox MV3 (115+), so one implementation serves both.
+//
+// All onMessage listeners are registered synchronously at the top level —
+// required for a killed service worker to wake on the event.
 
 'use strict';
 
 const api = typeof browser !== 'undefined' ? browser : chrome;
 const DAEMON_BASE = 'http://localhost:8000';
+const CSS_TABS_KEY = 'skald.cssTabs';
+const AUDIO_ROUTES_KEY = 'skald.audioRoutes';
 
-// Tabs where src/highlight.css is currently present. Best-effort: cleared on
-// navigation (status 'loading') and tab close so a fresh page gets re-inserted.
-const cssInjectedTabs = new Set();
+// --- session state (survives service-worker suspension) ---------------------
 
-api.tabs.onRemoved.addListener((tabId) => {
-  cssInjectedTabs.delete(tabId);
-});
+const session = (api.storage && api.storage.session) || null;
 
-api.tabs.onUpdated.addListener((tabId, changeInfo) => {
-  if (changeInfo && changeInfo.status === 'loading') {
-    cssInjectedTabs.delete(tabId);
+async function sessionGet(key, fallback) {
+  if (!session) return fallback;
+  try {
+    const got = await session.get(key);
+    return key in got ? got[key] : fallback;
+  } catch {
+    return fallback;
   }
-});
+}
+
+async function sessionSet(key, value) {
+  if (!session) return;
+  try {
+    await session.set({ [key]: value });
+  } catch {
+    /* best-effort; worst case is a duplicate stylesheet or a lost route */
+  }
+}
+
+// --- tab bootstrap: highlight CSS + loader -----------------------------------
 
 async function injectIntoTab(tabId) {
   if (typeof tabId !== 'number') return;
   try {
-    if (!cssInjectedTabs.has(tabId)) {
+    const injected = new Set(await sessionGet(CSS_TABS_KEY, []));
+    if (!injected.has(tabId)) {
       await api.scripting.insertCSS({
         target: { tabId },
         files: ['src/highlight.css'],
       });
-      cssInjectedTabs.add(tabId);
+      injected.add(tabId);
+      await sessionSet(CSS_TABS_KEY, [...injected]);
     }
   } catch (err) {
     // Duplicate stylesheet is harmless; missing one just means no highlight.
@@ -52,6 +84,18 @@ async function injectIntoTab(tabId) {
   }
 }
 
+api.tabs.onRemoved.addListener(async (tabId) => {
+  const injected = new Set(await sessionGet(CSS_TABS_KEY, []));
+  if (injected.delete(tabId)) await sessionSet(CSS_TABS_KEY, [...injected]);
+});
+
+api.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
+  if (changeInfo && changeInfo.status === 'loading') {
+    const injected = new Set(await sessionGet(CSS_TABS_KEY, []));
+    if (injected.delete(tabId)) await sessionSet(CSS_TABS_KEY, [...injected]);
+  }
+});
+
 function onStartReading() {
   api.tabs
     .query({ active: true, currentWindow: true })
@@ -60,7 +104,7 @@ function onStartReading() {
         return injectIntoTab(tabs[0].id);
       }
     })
-    .catch((err) => console.error('[skald] tab query failed:', err));
+    .catch((err) => console.error('[skald] tab query failed:', err && err.message));
 }
 
 api.commands.onCommand.addListener((command) => {
@@ -139,4 +183,109 @@ api.runtime.onMessage.addListener((msg) => {
   })();
   run.catch(() => {}); // never leave a rejected promise unobserved
   return run;
+});
+
+// --- offscreen audio broker (Chrome only; see header) ------------------------
+
+const OFFSCREEN_URL = 'offscreen.html';
+
+async function hasOffscreenDocument() {
+  const contexts = await chrome.runtime.getContexts({
+    contextTypes: ['OFFSCREEN_DOCUMENT'],
+    documentUrls: [chrome.runtime.getURL(OFFSCREEN_URL)],
+  });
+  return contexts.length > 0;
+}
+
+async function ensureOffscreen() {
+  if (!(await hasOffscreenDocument())) {
+    await chrome.offscreen.createDocument({
+      url: OFFSCREEN_URL,
+      reasons: ['AUDIO_PLAYBACK'],
+      justification: 'Play read-aloud speech when the page cannot (Chrome autoplay policy / no DOM in the service worker).',
+    });
+  }
+}
+
+api.runtime.onMessage.addListener((msg, sender) => {
+  if (!msg) return undefined;
+
+  // Capability probe from the content script: chrome.offscreen /
+  // runtime.getContexts exist only in extension contexts (this one), never
+  // in content scripts, so the engine asks here whether offscreen playback
+  // is available (true on Chrome's service worker, false on Firefox).
+  if (msg.type === 'skald:offscreen-capability') {
+    return Promise.resolve({
+      ok: typeof chrome !== 'undefined' && !!(chrome.offscreen && chrome.runtime && chrome.runtime.getContexts),
+    });
+  }
+
+  if (msg.type === 'skald:audio-play') {
+    const run = (async () => {
+      const tabId = sender && sender.tab && sender.tab.id;
+      if (typeof tabId !== 'number') {
+        return { ok: false, error: 'audio-play: no source tab' };
+      }
+      try {
+        await ensureOffscreen();
+        // Route map must live in storage.session: this worker can be killed
+        // mid-playback and the offscreen 'ended' event needs the target tab.
+        const routes = await sessionGet(AUDIO_ROUTES_KEY, {});
+        routes[msg.playId] = tabId;
+        await sessionSet(AUDIO_ROUTES_KEY, routes);
+        await chrome.runtime.sendMessage({
+          type: 'skald:offscreen-play',
+          playId: msg.playId,
+          mode: msg.mode, // 'blob' | 'stream'
+          mime: msg.mime,
+          bodyBase64: msg.bodyBase64,
+          url: msg.url,
+          body: msg.body,
+          volume: msg.volume,
+          rate: msg.rate,
+        });
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: String((err && err.message) || err) };
+      }
+    })();
+    run.catch(() => {});
+    return run;
+  }
+
+  if (msg.type === 'skald:audio-control') {
+    // Pause/resume/stop/volume for the single active offscreen playback.
+    chrome.runtime
+      .sendMessage({
+        type: 'skald:offscreen-control',
+        action: msg.action,
+        value: msg.value,
+      })
+      .catch(() => {});
+    return undefined;
+  }
+
+  if (msg.type === 'skald:audio-event' && sender.url === chrome.runtime.getURL(OFFSCREEN_URL)) {
+    // From the offscreen document → forward to the tab that started the play.
+    const run = (async () => {
+      const routes = await sessionGet(AUDIO_ROUTES_KEY, {});
+      const tabId = routes[msg.playId];
+      if (typeof tabId !== 'number') return undefined;
+      if (msg.event === 'ended' || msg.event === 'error') {
+        delete routes[msg.playId];
+        await sessionSet(AUDIO_ROUTES_KEY, routes);
+      }
+      try {
+        await chrome.tabs.sendMessage(tabId, msg);
+      } catch (err) {
+        // Tab navigated/closed mid-playback; nothing to deliver to.
+        console.warn('[skald] audio event undeliverable:', err && err.message);
+      }
+      return undefined;
+    })();
+    run.catch(() => {});
+    return undefined; // offscreen does not need a reply
+  }
+
+  return undefined;
 });
